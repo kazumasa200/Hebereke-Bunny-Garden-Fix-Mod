@@ -1,4 +1,6 @@
 # HeberekeBunnyGardenMod
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/b5b66725-53ff-4ab2-b495-c9d8f42ad3a3" />
+
 [へべれけ ばにーがーでん](https://store.steampowered.com/app/3575730/_/)(海外名:Merry Bunny Garden)用の解像度修正やフレームレート上限変更などを行うBepInEx5用Modです。
 
 ## 導入方法
