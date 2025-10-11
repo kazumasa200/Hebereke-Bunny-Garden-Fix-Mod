@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /HeberekeBunnyGardenMod/Assembly/Assembly-CSharp.dll
 /HeberekeBunnyGardenMod/Assembly/UniTask.dll
+/HeberekeBunnyGardenMod/Assembly/DOTween.dll
+/HeberekeBunnyGardenMod/Assembly/UniTask.DOTween.dll

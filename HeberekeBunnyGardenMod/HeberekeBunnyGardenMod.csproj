@@ -35,8 +35,14 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>Assembly\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="DOTween">
+      <HintPath>Assembly\DOTween.dll</HintPath>
+    </Reference>
     <Reference Include="UniTask">
       <HintPath>Assembly\UniTask.dll</HintPath>
+    </Reference>
+    <Reference Include="UniTask.DOTween">
+      <HintPath>Assembly\UniTask.DOTween.dll</HintPath>
     </Reference>
   </ItemGroup>
   
