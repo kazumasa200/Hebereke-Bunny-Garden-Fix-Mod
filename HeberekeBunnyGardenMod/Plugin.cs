@@ -15,7 +15,7 @@ namespace HeberekeBunnyGardenMod
     {
         public static ConfigEntry<int> ConfigWidth;
         public static ConfigEntry<int> ConfigHeight;
-        public static ConfigEntry<int> ConfigFrameRate;
+        public static ConfigEntry<sbyte> ConfigFrameRate;
         public static ConfigEntry<bool> ConfigUnlimited;
         public static ConfigEntry<bool> ConfigRemoveCensorLight;
 
@@ -38,14 +38,8 @@ namespace HeberekeBunnyGardenMod
             ConfigFrameRate = Config.Bind(
                 "Resolution",
                 "FrameRate",
-                60,
-                "フレームレートを指定します");
-
-            ConfigUnlimited = Config.Bind(
-                "FrameRate",
-                "UnlimitedFrameRate",
-                false,
-                "trueにするとフレームレートの制限を解除します");
+                (sbyte)60,
+                "フレームレートを指定します(128まで)");
 
             ConfigRemoveCensorLight = Config.Bind(
                 "Censor",
@@ -96,18 +90,15 @@ namespace HeberekeBunnyGardenMod
     {
         private static void Postfix()
         {
-            if (Plugin.ConfigUnlimited.Value)
+            if (Plugin.ConfigFrameRate.Value < 1 || Plugin.ConfigFrameRate.Value > 128)
             {
-                // 制限なし
-                Application.targetFrameRate = -1;
-                Debug.Log("フレームレート制限を解除しました");
+                Debug.LogWarning("フレームレートの値が不正です。1から128の間で指定してください。");
+                return;
             }
-            else
-            {
-                // 指定したフレームレートに設定
-                Application.targetFrameRate = Plugin.ConfigFrameRate.Value;
-                Debug.Log($"フレームレートを {Plugin.ConfigFrameRate.Value} FPS に設定しました");
-            }
+
+            // 指定したフレームレートに設定
+            Application.targetFrameRate = Plugin.ConfigFrameRate.Value;
+            Debug.Log($"フレームレートを {Plugin.ConfigFrameRate.Value} FPS に設定しました");
         }
     }
 
