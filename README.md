@@ -5,7 +5,7 @@
 1. Releaseから最新のdllファイルをダウンロードする。ブラウザによってはブロックするかもしれないので注意。
 1. [BepInEx5](https://github.com/bepinex/bepinex/releases)をダウンロードする。Windowsの場合はBepInEx_win_x64_5.*.*.*.zip系をダウンロードする。
 1. ゲームのexeがあるディレクトリに中身を展開。つまり、HEBEREKE BUNNY GARDEN.exeとBepInExフォルダやdoorstop_configとかが同じ階層にある状態が正しいということ。
-1. 一度ゲームを起動した後、BepinExフォルダの中にPluginsの中にdllをぶち込む。
+1. 一度ゲームを起動した後、BepinExフォルダの中にPluginsの中にダウンロードしたdllをぶち込む。
 1. もう一度起動するとBepinExフォルダの中のconfigフォルダに設定ファイルが出来上がるので、それをいじる。
 
 ## 注意
