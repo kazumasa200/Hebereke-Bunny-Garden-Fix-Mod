@@ -5,8 +5,11 @@ using GB;
 using GB.MiniGame;
 using HarmonyLib;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace HeberekeBunnyGardenMod
 {
@@ -15,9 +18,13 @@ namespace HeberekeBunnyGardenMod
     {
         public static ConfigEntry<int> ConfigWidth;
         public static ConfigEntry<int> ConfigHeight;
-        public static ConfigEntry<sbyte> ConfigFrameRate;
+        public static ConfigEntry<int> ConfigFrameRate;
         public static ConfigEntry<bool> ConfigUnlimited;
         public static ConfigEntry<bool> ConfigRemoveCensorLight;
+        public static ConfigEntry<bool> ConfigNoDamage;
+        public static ConfigEntry<bool> ConfigRegeneration;
+        public static ConfigEntry<bool> ConfigNoFallDown;
+        private HashSet<string> reportedObjects = new HashSet<string>();
 
         internal new static ManualLogSource Logger;
 
@@ -38,8 +45,8 @@ namespace HeberekeBunnyGardenMod
             ConfigFrameRate = Config.Bind(
                 "Resolution",
                 "FrameRate",
-                (sbyte)60,
-                "フレームレートを指定します(127まで)");
+                60,
+                "フレームレート上限を指定します。-1にすると上限を撤廃します。");
 
             ConfigRemoveCensorLight = Config.Bind(
                 "Censor",
@@ -47,21 +54,29 @@ namespace HeberekeBunnyGardenMod
                 false,
                 "trueにするとヨガとスキンケアの際に不自然な光が差し込まなくなります。センシティブモードも貫通します。くれぐれも配信しないように。");
 
+            ConfigNoDamage = Config.Bind(
+                "Cheat",
+                "NoDamage",
+                false,
+                "trueにするとダメージを受けなくなります。服も破けなくなります。でも橋から落ちるとアウト。");
+
+            ConfigRegeneration = Config.Bind(
+                "Cheat",
+                "Regeneration",
+                false,
+                "trueにするとダメージは受けますがHPが0にはなりません。服を破きたいときはこっち。");
+
+            ConfigNoFallDown = Config.Bind(
+                "Cheat",
+                "NoFallDown",
+                false,
+                "trueにするとヒートゲージマックス維持時に転倒しなくなります。");
+
             // Plugin startup logic
             Logger = base.Logger;
             var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             harmony.PatchAll();
             Logger.LogInfo($"解像度パッチを適用しました: {ConfigWidth.Value}x{ConfigHeight.Value}");
-        }
-
-        public static void SetFlashLightScale(GameObject flashLight)
-        {
-            if (flashLight == null) return;
-
-            float scale = ConfigWidth.Value / 1920;
-
-            flashLight.transform.localScale = new Vector3(scale, scale, 1f);
-            Debug.Log($"FlashLight Transformスケール: {scale}");
         }
 
         [HarmonyPatch(typeof(GBSystem), "CalcFullScreenResolution")]
@@ -99,12 +114,13 @@ namespace HeberekeBunnyGardenMod
         {
             private static void Postfix()
             {
-                if (Plugin.ConfigFrameRate.Value < 1 || Plugin.ConfigFrameRate.Value > sbyte.MaxValue)
+                if (Plugin.ConfigFrameRate.Value < 0)
                 {
-                    Debug.LogWarning("フレームレートの値が不正です。1から127の間で指定してください。");
+                    // -1なら上限撤廃
+                    Application.targetFrameRate = -1;
+                    Debug.Log("フレームレートの上限を撤廃しました");
                     return;
                 }
-
                 // 指定したフレームレートに設定
                 Application.targetFrameRate = Plugin.ConfigFrameRate.Value;
                 Debug.Log($"フレームレートを {Plugin.ConfigFrameRate.Value} FPS に設定しました");
@@ -185,55 +201,50 @@ namespace HeberekeBunnyGardenMod
                 }
             }
 
-            [HarmonyPatch(typeof(GB.ScreenFade), "SetType")]
-            public class SetTypePatch
+            [HarmonyPatch(typeof(GB.InGame.Player.PlayerActor), "DbgInvincible", MethodType.Getter)]
+            public class DbgInvinciblePatch
             {
-                private static void Postfix(GB.ScreenFade __instance, GB.ScreenFade.Types type)
+                private static void Postfix(ref bool __result)
                 {
-                    if (type == GB.ScreenFade.Types.White || type == GB.ScreenFade.Types.Black)
+                    if (Plugin.ConfigNoDamage.Value == true)
                     {
-                        // ColorObjのRectTransformを取得
-                        RectTransform rect = __instance.ColorObj.GetComponent<RectTransform>();
-                        if (rect != null)
-                        {
-                            float scale = Plugin.ConfigWidth.Value / 1920;
-
-                            // 方法1: スケールで変更（最も簡単）
-                            rect.localScale = new Vector3(scale, scale, 1f);
-
-                            Debug.Log($"フェードサイズを {scale} に設定しました");
-                        }
+                        __result = true;
+                    }
+                    else
+                    {
+                        __result = false;
                     }
                 }
             }
 
-            [HarmonyPatch(typeof(GB.InGame.Player.YogaGameTimeline), "Play",
-            new Type[] { typeof(GB.InGame.Player.YogaGameTimeline.Effects) })]
-            public class YogaGameTimelinePlayPatch
+            [HarmonyPatch(typeof(GB.InGame.Player.PlayerActor), "DbgNoOverheat", MethodType.Getter)]
+            public class DbgNoOverHeatPatch
             {
-                private static void Postfix(GB.InGame.Player.YogaGameTimeline __instance,
-                    GB.InGame.Player.YogaGameTimeline.Effects action)
+                private static void Postfix(ref bool __result)
                 {
-                    if (action == GB.InGame.Player.YogaGameTimeline.Effects.FlashLight)
+                    if (Plugin.ConfigNoFallDown.Value == true)
                     {
-                        Plugin.SetFlashLightScale(__instance.Game.Ui.FlashLight);
+                        __result = true;
+                    }
+                    else
+                    {
+                        __result = false;
                     }
                 }
             }
 
-            // Setup時にも設定（保険）
-            [HarmonyPatch(typeof(GB.MiniGame.YogaGame), "Setup", new Type[] {
-        typeof(GB.Character.Chara),
-        typeof(GB.Character.Chara),
-        typeof(System.Threading.CancellationToken)
-    })]
-            public class YogaGameSetupPatch
+            [HarmonyPatch(typeof(GB.InGame.Player.PlayerActor), "DbgAutoHpRecovery", MethodType.Getter)]
+            public class DbgAutoHpRecoveryPatch
             {
-                private static void Postfix(GB.MiniGame.YogaGame __instance)
+                private static void Postfix(ref bool __result)
                 {
-                    if (__instance.Ui != null && __instance.Ui.FlashLight != null)
+                    if (Plugin.ConfigRegeneration.Value == true)
                     {
-                        Plugin.SetFlashLightScale(__instance.Ui.FlashLight);
+                        __result = true;
+                    }
+                    else
+                    {
+                        __result = false;
                     }
                 }
             }
