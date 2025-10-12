@@ -1,11 +1,13 @@
 # HeberekeBunnyGardenMod
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/b5b66725-53ff-4ab2-b495-c9d8f42ad3a3" />
+
 [へべれけ ばにーがーでん](https://store.steampowered.com/app/3575730/_/)(海外名:Merry Bunny Garden)用の解像度修正やフレームレート上限変更などを行うBepInEx5用Modです。
 
 ## 導入方法
-1. Releaseから最新のdllファイルをダウンロードする。ブラウザによってはブロックするかもしれないので注意。
+1. Releasesから最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod v....zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。
 1. [BepInEx5](https://github.com/bepinex/bepinex/releases)をダウンロードする。Windowsの場合はBepInEx_win_x64_5.*.*.*.zip系をダウンロードする。
 1. ゲームのexeがあるディレクトリに中身を展開。つまり、HEBEREKE BUNNY GARDEN.exeとBepInExフォルダやdoorstop_configとかが同じ階層にある状態が正しいということ。
-1. 一度ゲームを起動した後、BepinExフォルダの中にPluginsの中にダウンロードしたdllをぶち込む。
+1. 一度ゲームを起動した後、ReleasesからダウンロードしたZipを展開し、中にあるファイルをBepinExフォルダの中にPluginsの中にぶち込む。
 1. もう一度起動するとBepinExフォルダの中のconfigフォルダに設定ファイルが出来上がるので、それをいじる。
 
 ## 注意
