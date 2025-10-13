@@ -12,7 +12,7 @@
 ## 導入方法
 1. Releasesから最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod v1.0.4.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>例<img width="1873" height="898" alt="image" src="https://github.com/user-attachments/assets/d22762a6-3666-4afc-b04d-08c0021018fe" /><br>画像はV1.0.4の例です。導入時の最新バージョンを入れてください。
 1. [BepInEx5](https://github.com/bepinex/bepinex/releases)をダウンロードする。Windowsの場合は```BepInEx_win_x64_{バージョン名}.zip```をダウンロードする。
-1. ゲームのexeがあるディレクトリに中身を展開。つまり、HEBEREKE BUNNY GARDEN.exeとBepInExフォルダやdoorstop_configとかが同じ階層にある状態が正しいということ。<br>例<img width="1338" height="390" alt="image" src="https://github.com/user-attachments/assets/c6f690ba-ab66-431c-988f-9f2f6bae5050" />
+1. ゲームのexeがあるディレクトリにBepInEx5の中身を展開。つまり、HEBEREKE BUNNY GARDEN.exeとBepInExフォルダやdoorstop_configとかが同じ階層にある状態が正しいということ。<br>例<img width="1338" height="390" alt="image" src="https://github.com/user-attachments/assets/c6f690ba-ab66-431c-988f-9f2f6bae5050" />
 1. 一度ゲームを起動した後、ReleasesからダウンロードしたZipを展開し、中にある```net.noeleve.HeberekeBunnyGardenMod.dll```をBepinExフォルダの中にPluginsの中に入れる。<br>例<img width="1437" height="280" alt="image" src="https://github.com/user-attachments/assets/4033af59-fa6d-4d72-9dfd-8bf0c914a0fe" />
 
 1. もう一度起動するとBepinExフォルダの中のconfigフォルダに```net.noeleve.HeberekeBunnyGardenMod.cfg```設定ファイルが出来上がるので、それをメモ帳などで変更して解像度の設定や光などの設定をする。<br>例<img width="1509" height="1456" alt="image" src="https://github.com/user-attachments/assets/368ad675-7334-4105-bcb4-3b214e009436" />
