@@ -10,7 +10,7 @@
 - とある箇所で出てくる怪しい光を取り除くことができる。
 
 ## 導入方法
-1. Releasesから最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod v....zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。
+1. Releasesから最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod v....zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br><img width="1873" height="898" alt="image" src="https://github.com/user-attachments/assets/d22762a6-3666-4afc-b04d-08c0021018fe" /><br>画像はV1.0.4の例です。導入時の最新バージョンを入れてください。
 1. [BepInEx5](https://github.com/bepinex/bepinex/releases)をダウンロードする。Windowsの場合はBepInEx_win_x64_5.*.*.*.zip系をダウンロードする。
 1. ゲームのexeがあるディレクトリに中身を展開。つまり、HEBEREKE BUNNY GARDEN.exeとBepInExフォルダやdoorstop_configとかが同じ階層にある状態が正しいということ。
 1. 一度ゲームを起動した後、ReleasesからダウンロードしたZipを展開し、中にあるファイルをBepinExフォルダの中にPluginsの中にぶち込む。
