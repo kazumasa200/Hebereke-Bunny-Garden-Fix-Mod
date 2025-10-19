@@ -496,6 +496,19 @@ public class RemoveCensorLightLoation
             Debug.Log("Canvas Scalerを Scale With Screen Size に変更しました");
         }
     }
+
+    [HarmonyPatch(typeof(GBSystem), "IsInputDisabled")]
+    public class CanvasScalerReflectionYoga1Patch
+    {
+        private static void Postfix(ref bool __result)
+        {
+            // フリーカメラがONの場合、常にtrue（入力無効）を返す
+            if (Plugin.isActive)
+            {
+                __result = true;
+            }
+        }
+    }
 }
 
 public class GBInputFreeCameraController : MonoBehaviour
@@ -521,76 +534,70 @@ public class GBInputFreeCameraController : MonoBehaviour
 
     private void Update()
     {
-        // マウス視点（GBInputのMouseCamera使用）
-        if (useMouseView)
+        // Input Systemから直接取得（GBInput経由ではない）
+        if (useMouseView && Mouse.current != null)
         {
-            Vector2 mouseCamera = GB.GBInput.CameraControll(false); // RStick使用
+            Vector2 mouseDelta = Mouse.current.delta.ReadValue();
 
             float sensitivity = Plugin.ConfigSensitivity.Value;
-            rotationH += mouseCamera.x * sensitivity;
-            rotationV -= mouseCamera.y * sensitivity;
+            rotationH += mouseDelta.x * sensitivity * Time.deltaTime;
+            rotationV -= mouseDelta.y * sensitivity * Time.deltaTime;
         }
 
         rotationV = Mathf.Clamp(rotationV, -90f, 90f);
         transform.rotation = Quaternion.AngleAxis(rotationH, Vector3.up);
         transform.rotation *= Quaternion.AngleAxis(rotationV, Vector3.right);
 
-        // 移動速度
         float speed = Plugin.ConfigSpeed.Value;
 
-        // キーボード移動（GBInput使用）
-        // 矢印キーまたはWASD
-        if (GB.GBInput.KeyboardUpPressing || GB.GBInput.UpPressing)
+        if (Keyboard.current != null)
         {
-            transform.position += speed * Time.deltaTime * transform.forward;
-        }
-        if (GB.GBInput.KeyboardDownPressing || GB.GBInput.DownPressing)
-        {
-            transform.position -= speed * Time.deltaTime * transform.forward;
-        }
-        if (GB.GBInput.KeyboardLeftPressing || GB.GBInput.LeftPressing)
-        {
-            transform.position -= speed * Time.deltaTime * transform.right;
-        }
-        if (GB.GBInput.KeyboardRightPressing || GB.GBInput.RightPressing)
-        {
-            transform.position += speed * Time.deltaTime * transform.right;
+            if (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed)
+            {
+                speed = Plugin.ConfigFastSpeed.Value;
+            }
+            else if (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed)
+            {
+                speed = Plugin.ConfigSlowSpeed.Value;
+            }
+
+            // Input Systemから直接キーボード入力を取得
+            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed)
+            {
+                transform.position += speed * Time.deltaTime * transform.forward;
+            }
+            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed)
+            {
+                transform.position -= speed * Time.deltaTime * transform.forward;
+            }
+            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
+            {
+                transform.position -= speed * Time.deltaTime * transform.right;
+            }
+            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
+            {
+                transform.position += speed * Time.deltaTime * transform.right;
+            }
+
+            if (Keyboard.current.qKey.isPressed)
+            {
+                transform.position += speed * Time.deltaTime * Vector3.up;
+            }
+            if (Keyboard.current.eKey.isPressed)
+            {
+                transform.position += speed * Time.deltaTime * Vector3.down;
+            }
         }
 
-        // L/Rボタンで上下移動
-        if (GB.GBInput.LPressing)
+        if (Mouse.current != null)
         {
-            transform.position += speed * Time.deltaTime * Vector3.up;
-        }
-        if (GB.GBInput.RPressing)
-        {
-            transform.position += speed * Time.deltaTime * Vector3.down;
-        }
-
-        // ZL/ZRで速度変更
-        if (GB.GBInput.ZLPressing)
-        {
-            speed = Plugin.ConfigSlowSpeed.Value;
-        }
-        else if (GB.GBInput.ZRPressing)
-        {
-            speed = Plugin.ConfigFastSpeed.Value;
-        }
-
-        // マウスクリックでマウス視点ON/OFF
-        if (GB.GBInput.LeftClick || GB.GBInput.RightClick)
-        {
-            useMouseView = !useMouseView;
-            Cursor.lockState = useMouseView ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = !useMouseView;
-        }
-
-        // Selectボタン（Esc）でマウス視点OFF
-        if (GB.GBInput.SelectTriggered)
-        {
-            useMouseView = false;
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            if (Mouse.current.leftButton.wasPressedThisFrame ||
+                Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                useMouseView = !useMouseView;
+                Cursor.lockState = useMouseView ? CursorLockMode.Locked : CursorLockMode.None;
+                Cursor.visible = !useMouseView;
+            }
         }
     }
 
