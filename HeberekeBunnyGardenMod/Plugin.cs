@@ -2,13 +2,10 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using GB;
-using GB.InGame.Player;
-using GB.MiniGame;
 using HarmonyLib;
-using System;
-using System.Threading;
+using HeberekeBunnyGardenMod.Controllers;
+using HeberekeBunnyGardenMod.Utils;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace HeberekeBunnyGardenMod;
 
@@ -32,7 +29,8 @@ public class Plugin : BaseUnityPlugin
     private Camera freeCam;
     private Camera originalCam;
     private GBInputFreeCameraController controller;
-    public static bool isActive = false;
+    public static bool isFreeCamActive = false;
+    public static bool isFixedFreeCam = false;
 
     internal new static ManualLogSource Logger;
 
@@ -80,16 +78,30 @@ public class Plugin : BaseUnityPlugin
             false,
             "trueにするとヒートゲージマックス維持時に転倒しなくなります。");
 
-        ConfigSensitivity = Config.Bind("Camera", "Sensitivity", 2f, "フリーカメラのマウス感度");
-        ConfigSpeed = Config.Bind("Camera", "Speed", 10f, "フリーカメラの移動速度");
-        ConfigFastSpeed = Config.Bind("Camera", "FastSpeed", 30f, "フリーカメラの高速移動速度（Shift）");
-        ConfigSlowSpeed = Config.Bind("Camera", "SlowSpeed", 2.5f, "フリーカメラの低速移動速度（Ctrl）");
+        ConfigSensitivity = Config.Bind(
+            "Camera",
+            "Sensitivity",
+            2f,
+            "フリーカメラのマウス感度");
+        ConfigSpeed = Config.Bind("Camera",
+            "Speed",
+            10f,
+            "フリーカメラの移動速度");
+        ConfigFastSpeed = Config.Bind("Camera",
+            "FastSpeed",
+            30f,
+            "フリーカメラの高速移動速度（Shift）");
+        ConfigSlowSpeed = Config.Bind("Camera",
+            "SlowSpeed",
+            2.5f,
+            "フリーカメラの低速移動速度（Ctrl）");
 
         // Plugin startup logic
         Logger = base.Logger;
+        PatchLogger.Initialize(Logger);
         var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         harmony.PatchAll();
-        Logger.LogInfo($"解像度パッチを適用しました: {ConfigWidth.Value}x{ConfigHeight.Value}");
+        PatchLogger.LogInfo($"解像度パッチを適用しました: {Plugin.ConfigWidth.Value}x{Plugin.ConfigHeight.Value}");
     }
 
     private void OnGUI()
@@ -99,9 +111,20 @@ public class Plugin : BaseUnityPlugin
         {
             ToggleFreeCam();
         }
-
-        if (isActive)
+        // F6で固定モード切替
+        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.F6)
         {
+            ToggleFixedFreeCam();
+        }
+
+        if (isFreeCamActive)
+        {
+            if (isFixedFreeCam)
+            {
+                GUI.color = Color.yellow;
+                GUI.Label(new Rect(10, 40, 500, 30), "Fixed Free Camera Mode: ON (F6=TOGGLE)");
+                GUI.color = Color.white;
+            }
             GUI.color = Color.green;
             GUI.Label(new Rect(10, 10, 500, 30), "Free Camera: ON (F5=OFF, Arrow/WASD=Move, E/Q=UpDown)");
             GUI.color = Color.white;
@@ -110,18 +133,28 @@ public class Plugin : BaseUnityPlugin
 
     private void ToggleFreeCam()
     {
-        isActive = !isActive;
+        isFreeCamActive = !isFreeCamActive;
 
-        if (isActive)
+        if (isFreeCamActive)
         {
             CreateFreeCam();
         }
         else
         {
             DestroyFreeCam();
+            isFixedFreeCam = false;
         }
 
-        Logger.LogInfo($"フリーカメラ: {(isActive ? "ON" : "OFF")}");
+        Logger.LogInfo($"フリーカメラ: {(isFreeCamActive ? "ON" : "OFF")}");
+    }
+
+    private void ToggleFixedFreeCam()
+    {
+        if (isFreeCamActive)
+        {
+            isFixedFreeCam = !isFixedFreeCam;
+            Logger.LogInfo($"フリーカメラ固定モード: {(isFixedFreeCam ? "ON" : "OFF")}");
+        }
     }
 
     private void CreateFreeCam()
@@ -185,425 +218,15 @@ public class Plugin : BaseUnityPlugin
     }
 }
 
-[HarmonyPatch(typeof(GBSystem), "CalcFullScreenResolution")]
-public class CalcFullScreenResolutionPatch
+[HarmonyPatch(typeof(GBSystem), "IsInputDisabled")]
+public class CanvasScalerReflectionYoga1Patch
 {
-    private static bool Prefix(ref ValueTuple<int, int, bool> __result)
+    private static void Postfix(ref bool __result)
     {
-        // コンフィグから値を取得
-        int num = Plugin.ConfigWidth.Value;
-        int num2 = Plugin.ConfigHeight.Value;
-        bool flag = true;
-        float num3 = (float)num / (float)num2;
-        Resolution currentResolution = Screen.currentResolution;
-        float num4 = (float)currentResolution.width / (float)currentResolution.height;
-
-        if (num4 > num3)
+        // フリーカメラがONかつ、固定モードでない場合、入力無効化
+        if (Plugin.isFreeCamActive && !Plugin.isFixedFreeCam)
         {
-            num2 = Mathf.Min(num2, currentResolution.height);
-            num = (int)((float)num2 * num3);
-            flag = false;
+            __result = true;
         }
-        else if (num4 < num3)
-        {
-            num = Mathf.Min(num, currentResolution.width);
-            num2 = (int)((float)num / num3);
-        }
-
-        __result = new ValueTuple<int, int, bool>(num, num2, flag);
-        return false;
-    }
-}
-
-[HarmonyPatch(typeof(GBSystem), "Setup")]
-public class SetRefreshRatePatch
-{
-    private static void Postfix()
-    {
-        if (Plugin.ConfigFrameRate.Value < 0)
-        {
-            // -1なら上限撤廃
-            Application.targetFrameRate = -1;
-            Debug.Log("フレームレートの上限を撤廃しました");
-            return;
-        }
-        // 指定したフレームレートに設定
-        Application.targetFrameRate = Plugin.ConfigFrameRate.Value;
-        Debug.Log($"フレームレートを {Plugin.ConfigFrameRate.Value} FPS に設定しました");
-    }
-}
-
-[HarmonyPatch(typeof(GB.MiniGame.YogaGame.Charas), "SetTopless")]
-public class RemoveCensorLightPatch
-{
-    private static bool Prefix(YogaGame.Charas __instance, bool v)
-    {
-        // 元のコードを再現しつつ、CensorLightだけfalseに変更
-        __instance.Topless.SetActive(true);
-        __instance.Normal.SetActive(!v);
-        if (Plugin.ConfigRemoveCensorLight.Value == true)
-        {
-            __instance.CensorLight.SetActive(false);
-        }
-        else
-        {
-            __instance.CensorLight.SetActive(v);
-        }
-        __instance.Anim2.Animator.transform.GetChild(1).gameObject.SetActive(v);
-
-        // 元のメソッドをスキップ
-        return false;
-    }
-}
-
-[HarmonyPatch(typeof(GB.MiniGame.LoationGame), "Setup", new Type[] {
-        typeof(GB.Character.Chara),
-        typeof(CancellationToken)
-    })]
-public class RemoveCensorLightLoation
-{
-    // Postfixを使用（Setup完了後に実行）
-    private static void Postfix(GB.MiniGame.LoationGame __instance)
-    {
-        try
-        {
-            if (!Plugin.ConfigRemoveCensorLight.Value)
-            {
-                return;
-            }
-
-            if (__instance == null)
-            {
-                Debug.LogWarning("__instance is null");
-                return;
-            }
-
-            if (__instance.Chara == null)
-            {
-                Debug.LogWarning("__instance.Chara is null");
-                return;
-            }
-
-            if (__instance.Chara.CensorLights == null)
-            {
-                Debug.LogWarning("CensorLights is null");
-                return;
-            }
-
-            // CensorLightsを無効化
-            foreach (var light in __instance.Chara.CensorLights)
-            {
-                if (light != null)
-                {
-                    light.SetActive(false);
-                    Debug.Log("CensorLightを無効化しました");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"RemoveCensorLightLoation エラー: {ex.Message}");
-            Debug.LogError($"スタックトレース: {ex.StackTrace}");
-        }
-    }
-
-    [HarmonyPatch(typeof(GB.InGame.Player.PlayerActor), "DbgInvincible", MethodType.Getter)]
-    public class DbgInvinciblePatch
-    {
-        private static void Postfix(ref bool __result)
-        {
-            if (Plugin.ConfigNoDamage.Value == true)
-            {
-                __result = true;
-            }
-            else
-            {
-                __result = false;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(GB.InGame.Player.PlayerActor), "DbgNoOverheat", MethodType.Getter)]
-    public class DbgNoOverHeatPatch
-    {
-        private static void Postfix(ref bool __result)
-        {
-            if (Plugin.ConfigNoFallDown.Value == true)
-            {
-                __result = true;
-            }
-            else
-            {
-                __result = false;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(GB.InGame.Player.PlayerActor), "DbgAutoHpRecovery", MethodType.Getter)]
-    public class DbgAutoHpRecoveryPatch
-    {
-        private static void Postfix(ref bool __result)
-        {
-            if (Plugin.ConfigRegeneration.Value == true)
-            {
-                __result = true;
-            }
-            else
-            {
-                __result = false;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(TornTimeline), "PlayAsync")]
-    public class CanvasScalerReflectionPatch
-    {
-        private static void Postfix(TornTimeline __instance)
-        {
-            Transform canvas = __instance.transform.Find("Canvas");
-            if (canvas == null) return;
-
-            FixCanvasScalerWithReflection(canvas.gameObject);
-        }
-
-        private static void FixCanvasScalerWithReflection(GameObject canvasObj)
-        {
-            // CanvasScalerコンポーネントを取得
-            var scalerType = Type.GetType("UnityEngine.UI.CanvasScaler, UnityEngine.UI");
-            if (scalerType == null)
-            {
-                Debug.LogWarning("CanvasScaler型が見つかりません");
-                return;
-            }
-
-            Component scaler = canvasObj.GetComponent(scalerType);
-            if (scaler == null)
-            {
-                scaler = canvasObj.AddComponent(scalerType);
-            }
-
-            // uiScaleModeを設定（ScaleWithScreenSize = 1）
-            var uiScaleModeField = scalerType.GetField("m_UiScaleMode",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (uiScaleModeField != null)
-            {
-                uiScaleModeField.SetValue(scaler, 1); // ScaleWithScreenSize
-            }
-
-            // referenceResolutionを設定
-            var referenceResolutionField = scalerType.GetField("m_ReferenceResolution",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (referenceResolutionField != null)
-            {
-                referenceResolutionField.SetValue(scaler, new Vector2(1920, 1080));
-            }
-
-            // screenMatchModeを設定（MatchWidthOrHeight = 0）
-            var screenMatchModeField = scalerType.GetField("m_ScreenMatchMode",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (screenMatchModeField != null)
-            {
-                screenMatchModeField.SetValue(scaler, 0); // MatchWidthOrHeight
-            }
-
-            // matchWidthOrHeightを設定（0.5 = 両方）
-            var matchField = scalerType.GetField("m_MatchWidthOrHeight",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (matchField != null)
-            {
-                matchField.SetValue(scaler, 0.5f);
-            }
-
-            Debug.Log("Canvas Scalerを Scale With Screen Size に変更しました");
-        }
-    }
-
-    [HarmonyPatch(typeof(YogaGameTimeline), "PlayAsync")]
-    public class CanvasScalerReflectionYogaPatch
-    {
-        private static void Postfix(YogaGameTimeline __instance)
-        {
-            Transform canvas = __instance.transform.Find("Canvas");
-            if (canvas == null) return;
-
-            FixCanvasScalerWithReflection(canvas.gameObject);
-        }
-
-        private static void FixCanvasScalerWithReflection(GameObject canvasObj)
-        {
-            // CanvasScalerコンポーネントを取得
-            var scalerType = Type.GetType("UnityEngine.UI.CanvasScaler, UnityEngine.UI");
-            if (scalerType == null)
-            {
-                Debug.LogWarning("CanvasScaler型が見つかりません");
-                return;
-            }
-
-            Component scaler = canvasObj.GetComponent(scalerType);
-            if (scaler == null)
-            {
-                scaler = canvasObj.AddComponent(scalerType);
-            }
-
-            // uiScaleModeを設定（ScaleWithScreenSize = 1）
-            var uiScaleModeField = scalerType.GetField("m_UiScaleMode",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (uiScaleModeField != null)
-            {
-                uiScaleModeField.SetValue(scaler, 1); // ScaleWithScreenSize
-            }
-
-            // referenceResolutionを設定
-            var referenceResolutionField = scalerType.GetField("m_ReferenceResolution",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (referenceResolutionField != null)
-            {
-                referenceResolutionField.SetValue(scaler, new Vector2(1920, 1080));
-            }
-
-            // screenMatchModeを設定（MatchWidthOrHeight = 0）
-            var screenMatchModeField = scalerType.GetField("m_ScreenMatchMode",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (screenMatchModeField != null)
-            {
-                screenMatchModeField.SetValue(scaler, 0); // MatchWidthOrHeight
-            }
-
-            // matchWidthOrHeightを設定（0.5 = 両方）
-            var matchField = scalerType.GetField("m_MatchWidthOrHeight",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance);
-
-            if (matchField != null)
-            {
-                matchField.SetValue(scaler, 0.5f);
-            }
-
-            Debug.Log("Canvas Scalerを Scale With Screen Size に変更しました");
-        }
-    }
-
-    [HarmonyPatch(typeof(GBSystem), "IsInputDisabled")]
-    public class CanvasScalerReflectionYoga1Patch
-    {
-        private static void Postfix(ref bool __result)
-        {
-            // フリーカメラがONの場合、常にtrue（入力無効）を返す
-            if (Plugin.isActive)
-            {
-                __result = true;
-            }
-        }
-    }
-}
-
-public class GBInputFreeCameraController : MonoBehaviour
-{
-    private float rotationH;
-    private float rotationV;
-    private bool useMouseView = true;
-
-    private void Start()
-    {
-        Vector3 eulerAngles = transform.rotation.eulerAngles;
-        rotationH = eulerAngles.y;
-        rotationV = eulerAngles.x;
-
-        if (rotationV > 180f)
-        {
-            rotationV -= 360f;
-        }
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
-
-    private void Update()
-    {
-        // Input Systemから直接取得（GBInput経由ではない）
-        if (useMouseView && Mouse.current != null)
-        {
-            Vector2 mouseDelta = Mouse.current.delta.ReadValue();
-
-            float sensitivity = Plugin.ConfigSensitivity.Value;
-            rotationH += mouseDelta.x * sensitivity * Time.deltaTime;
-            rotationV -= mouseDelta.y * sensitivity * Time.deltaTime;
-        }
-
-        rotationV = Mathf.Clamp(rotationV, -90f, 90f);
-        transform.rotation = Quaternion.AngleAxis(rotationH, Vector3.up);
-        transform.rotation *= Quaternion.AngleAxis(rotationV, Vector3.right);
-
-        float speed = Plugin.ConfigSpeed.Value;
-
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed)
-            {
-                speed = Plugin.ConfigFastSpeed.Value;
-            }
-            else if (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed)
-            {
-                speed = Plugin.ConfigSlowSpeed.Value;
-            }
-
-            // Input Systemから直接キーボード入力を取得
-            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed)
-            {
-                transform.position += speed * Time.deltaTime * transform.forward;
-            }
-            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed)
-            {
-                transform.position -= speed * Time.deltaTime * transform.forward;
-            }
-            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
-            {
-                transform.position -= speed * Time.deltaTime * transform.right;
-            }
-            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
-            {
-                transform.position += speed * Time.deltaTime * transform.right;
-            }
-
-            if (Keyboard.current.qKey.isPressed)
-            {
-                transform.position += speed * Time.deltaTime * Vector3.up;
-            }
-            if (Keyboard.current.eKey.isPressed)
-            {
-                transform.position += speed * Time.deltaTime * Vector3.down;
-            }
-        }
-
-        if (Mouse.current != null)
-        {
-            if (Mouse.current.leftButton.wasPressedThisFrame ||
-                Mouse.current.rightButton.wasPressedThisFrame)
-            {
-                useMouseView = !useMouseView;
-                Cursor.lockState = useMouseView ? CursorLockMode.Locked : CursorLockMode.None;
-                Cursor.visible = !useMouseView;
-            }
-        }
-    }
-
-    private void OnDisable()
-    {
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 }
