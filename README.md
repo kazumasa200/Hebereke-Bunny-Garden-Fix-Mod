@@ -8,6 +8,7 @@
 - 本来は60で固定されていたフレームレート制限を任意の値にするか、取り払うことができる。
 - ダメージを受けない設定、ヒートゲージがたまった状態でも転ばなくなる設定のオンオフができる。
 - とある箇所で出てくる怪しい光を取り除くことができる。
+- F5キーでフリーカメラに切り替えることができ、フリーカメラ中にF6キーを押すとカメラを固定してキャラ操作ができる。
 
 ## 導入方法
 1. [Releases](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/releases)から最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod v1.0.4.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>例<img width="1873" height="898" alt="image" src="https://github.com/user-attachments/assets/d22762a6-3666-4afc-b04d-08c0021018fe" /><br>画像はV1.0.4の例です。導入時の最新バージョンを入れてください。
