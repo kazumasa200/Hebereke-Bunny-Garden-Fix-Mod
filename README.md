@@ -20,7 +20,8 @@
 
 
 ## 既知の問題点
-Issueをご確認ください。バグや改善点、ほしい機能ありましたらIssueまでお願いします。
+[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)をご確認ください。バグや改善点、ほしい機能ありましたら[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)までお願いします。  
+要望の際は右上のNew Issueから個別のissueを作ってください。
 
 ## 注意
 最後に、このModを使用して配信することで動画プラットフォームからBAN等の処置を受けられた際も一切の責任を持ちません。自己責任。
@@ -32,4 +33,3 @@ Issueをご確認ください。バグや改善点、ほしい機能ありまし
 
 ## お問い合わせ
 X(旧Twitter):@kazumasa200
-要望についてはissueのNew Issueから専用項目を作成いただくようお願いします
