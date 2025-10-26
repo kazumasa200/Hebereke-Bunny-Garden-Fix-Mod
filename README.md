@@ -20,7 +20,7 @@
 
 
 ## 既知の問題点
-[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)をご確認ください。バグや改善点、ほしい機能ありましたら[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)までお願いします。  
+[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)をご確認ください。バグや改善点、ほしい機能ありましたら[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)もしくは[X](https://x.com/kazumasa200)までお願いします。  
 要望の際は右上のNew Issueから個別のissueを作ってください。
 
 ## 注意
