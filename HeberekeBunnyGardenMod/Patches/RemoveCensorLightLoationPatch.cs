@@ -9,50 +9,63 @@ namespace HeberekeBunnyGardenMod.Patches;
 /// <summary>
 /// スキンケアで不自然な光を消すパッチ
 /// </summary>
-[HarmonyPatch(typeof(LoationGame), "Setup", [typeof(GB.Character.Chara), typeof(CancellationToken)])]
-public class RemoveCensorLightLoation
+public class RemoveCensorLightLoationPatch
 {
-    private static void Postfix(LoationGame __instance)
+    [HarmonyPatch(typeof(LoationGame), "Setup", [typeof(bool), typeof(GB.Character.Chara), typeof(CancellationToken)])]
+    public class RemoveCensorLightLoation
     {
-        try
+        private static void Postfix(LoationGame __instance)
+        {
+            try
+            {
+                if (!Plugin.ConfigRemoveCensorLight.Value)
+                {
+                    return;
+                }
+
+                if (__instance == null)
+                {
+                    PatchLogger.LogWarning("__instance is null");
+                    return;
+                }
+
+                if (__instance.Chara == null)
+                {
+                    PatchLogger.LogWarning("__instance.Chara is null");
+                    return;
+                }
+
+                if (__instance.Chara.CensorLight == null)
+                {
+                    PatchLogger.LogWarning("CensorLights is null");
+                    return;
+                }
+
+                __instance.Chara.CensorLight.SetActive(false);
+                PatchLogger.LogInfo("CensorLightを無効化しました");
+            }
+            catch (Exception ex)
+            {
+                PatchLogger.LogError($"RemoveCensorLightLoation エラー: {ex.Message}");
+                PatchLogger.LogError($"スタックトレース: {ex.StackTrace}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(LoationGame.Charas), "AttachCensorLight", [typeof(bool)])]
+    public class DisableAttachCensorLight
+    {
+        private static bool Prefix(LoationGame.Charas __instance)
         {
             if (!Plugin.ConfigRemoveCensorLight.Value)
             {
-                return;
+                return true;
             }
-
-            if (__instance == null)
+            if (__instance.CensorLight != null)
             {
-                PatchLogger.LogWarning("__instance is null");
-                return;
+                __instance.CensorLight.SetActive(false);
             }
-
-            if (__instance.Chara == null)
-            {
-                PatchLogger.LogWarning("__instance.Chara is null");
-                return;
-            }
-
-            if (__instance.Chara.CensorLights == null)
-            {
-                PatchLogger.LogWarning("CensorLights is null");
-                return;
-            }
-
-            // CensorLightsを無効化
-            foreach (var light in __instance.Chara.CensorLights)
-            {
-                if (light != null)
-                {
-                    light.SetActive(false);
-                    PatchLogger.LogInfo("CensorLightを無効化しました");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            PatchLogger.LogError($"RemoveCensorLightLoation エラー: {ex.Message}");
-            PatchLogger.LogError($"スタックトレース: {ex.StackTrace}");
+            return false;
         }
     }
 }
