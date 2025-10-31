@@ -3,11 +3,15 @@
 
 [へべれけ ばにーがーでん](https://store.steampowered.com/app/3575730/_/)(海外名:Merry Bunny Garden)用の解像度修正やフレームレート上限変更などを行うBepInEx5用Modです。
 
+## 対応バージョン(v1.0.6現在)
+ゲームバージョン1.0.0のみ対応
+
 ## 機能
 - 内部解像度を指定することで画質を向上することができる。
 - 本来は60で固定されていたフレームレート制限を任意の値にするか、取り払うことができる。
 - ダメージを受けない設定、ヒートゲージがたまった状態でも転ばなくなる設定のオンオフができる。
 - とある箇所で出てくる怪しい光を取り除くことができる。
+- F5キーでフリーカメラに切り替えることができ、フリーカメラ中にF6キーを押すとカメラを固定してキャラ操作ができる。
 
 ## 導入方法
 1. [Releases](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/releases)から最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod v1.0.4.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>例<img width="1873" height="898" alt="image" src="https://github.com/user-attachments/assets/d22762a6-3666-4afc-b04d-08c0021018fe" /><br>画像はV1.0.4の例です。導入時の最新バージョンを入れてください。
@@ -19,7 +23,8 @@
 
 
 ## 既知の問題点
-Issueをご確認ください。バグや改善点、ほしい機能ありましたらIssueまでお願いします。
+[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)をご確認ください。バグや改善点、ほしい機能ありましたら[Issues](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/issues)もしくは[X](https://x.com/kazumasa200)までお願いします。  
+要望の際は右上のNew Issueから個別のissueを作ってください。
 
 ## 注意
 最後に、このModを使用して配信することで動画プラットフォームからBAN等の処置を受けられた際も一切の責任を持ちません。自己責任。
