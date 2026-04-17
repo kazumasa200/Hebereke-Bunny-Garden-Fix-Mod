@@ -11,6 +11,7 @@ using HarmonyLib;
 using HeberekeBunnyGardenMod.Controllers;
 using HeberekeBunnyGardenMod.Utils;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace HeberekeBunnyGardenMod;
 
@@ -196,6 +197,7 @@ public class Plugin : BaseUnityPlugin
 
         // カメラ設定をコピー
         freeCam.CopyFrom(originalCam);
+        CopyUrpCameraData(originalCam, freeCam);
 
         // 元のカメラの位置から開始
         freeCamObject.transform.position = originalCam.transform.position;
@@ -216,6 +218,23 @@ public class Plugin : BaseUnityPlugin
         }
 
         Logger.LogInfo("フリーカメラを作成しました");
+    }
+
+    private static void CopyUrpCameraData(Camera src, Camera dst)
+    {
+        var srcData = src.GetUniversalAdditionalCameraData();
+        var dstData = dst.GetUniversalAdditionalCameraData();
+        if (srcData == null || dstData == null)
+            return;
+
+        dstData.renderPostProcessing  = srcData.renderPostProcessing;
+        dstData.antialiasing          = srcData.antialiasing;
+        dstData.antialiasingQuality   = srcData.antialiasingQuality;
+        dstData.stopNaN               = srcData.stopNaN;
+        dstData.dithering             = srcData.dithering;
+        dstData.renderShadows         = srcData.renderShadows;
+        dstData.volumeLayerMask       = srcData.volumeLayerMask;
+        dstData.volumeTrigger         = srcData.volumeTrigger;
     }
 
     private void DestroyFreeCam()
