@@ -9,12 +9,23 @@ using UnityEngine;
 
 namespace HeberekeBunnyGardenMod;
 
+public enum AntiAliasingType
+{
+    Off,
+    FXAA,
+    TAA,
+    MSAA2x,
+    MSAA4x,
+    MSAA8x,
+}
+
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : BaseUnityPlugin
 {
     public static ConfigEntry<int> ConfigWidth;
     public static ConfigEntry<int> ConfigHeight;
     public static ConfigEntry<int> ConfigFrameRate;
+    public static ConfigEntry<AntiAliasingType> ConfigAntiAliasing;
     public static ConfigEntry<bool> ConfigUnlimited;
     public static ConfigEntry<bool> ConfigRemoveCensorLight;
     public static ConfigEntry<bool> ConfigNoDamage;
@@ -53,6 +64,12 @@ public class Plugin : BaseUnityPlugin
             "FrameRate",
             60,
             "フレームレート上限を指定します。-1にすると上限を撤廃します。");
+
+        ConfigAntiAliasing = Config.Bind(
+            "AntiAliasing",
+            "AntiAliasingType",
+            AntiAliasingType.MSAA8x,
+            "アンチエイリアシングの種類を指定します。Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x");
 
         ConfigRemoveCensorLight = Config.Bind(
             "Censor",
@@ -102,6 +119,7 @@ public class Plugin : BaseUnityPlugin
         var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         harmony.PatchAll();
         PatchLogger.LogInfo($"解像度パッチを適用しました: {Plugin.ConfigWidth.Value}x{Plugin.ConfigHeight.Value}");
+        PatchLogger.LogInfo($"アンチエイリアシング設定: {Plugin.ConfigAntiAliasing.Value}");
     }
 
     private void OnGUI()
