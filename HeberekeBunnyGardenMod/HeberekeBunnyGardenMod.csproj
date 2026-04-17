@@ -1,7 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    BepInExVersion: BepInEx のメジャーバージョンを指定します。
+      - Visual Studio でビルド構成を "Debug_BIE6" / "Release_BIE6" にすると自動的に 6 になります。
+      - CLI でも指定可能: dotnet build -p:BepInExVersion=6
+      - 省略時は BepInEx 5 でビルドされます。
+  -->
+  <PropertyGroup>
+    <Configurations>Debug;Release;Debug_BIE6;Release_BIE6</Configurations>
+    <BepInExVersion Condition="'$(BepInExVersion)' == '' And $(Configuration.Contains('BIE6'))">6</BepInExVersion>
+    <BepInExVersion Condition="'$(BepInExVersion)' == ''">5</BepInExVersion>
+  </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework Condition="'$(BepInExVersion)' == '5'">netstandard2.1</TargetFramework>
+    <TargetFramework Condition="'$(BepInExVersion)' == '6'">net6.0</TargetFramework>
     <AssemblyName>net.noeleve.HeberekeBunnyGardenMod</AssemblyName>
     <Product>HeberekeBunnyGardenMod</Product>
     <Version>1.1.1</Version>
@@ -15,23 +28,40 @@
     <RootNamespace>HeberekeBunnyGardenMod</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(BepInExVersion)' == '5'">
+    <DefineConstants>$(DefineConstants);BIE5</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(BepInExVersion)' == '6'">
+    <DefineConstants>$(DefineConstants);BIE6</DefineConstants>
+    <NoWarn>$(NoWarn);BepInEx002</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="Assembly\Assembly-CSharp.dll" />
     <None Remove="Assembly\UniTask.dll" />
     <None Remove="Assembly\Unity.RenderPipelines.Universal.Runtime.dll" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- BepInEx 5 用パッケージ -->
+  <ItemGroup Condition="'$(BepInExVersion)' == '5'">
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="UnityEngine.Modules" Version="6000.0.31" IncludeAssets="compile" />
   </ItemGroup>
-  
+
+  <!-- BepInEx 6 用パッケージ (BepInEx dev feed から取得) -->
+  <ItemGroup Condition="'$(BepInExVersion)' == '6'">
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Unity.Mono" Version="6.0.0-*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="UnityEngine.Modules" Version="6000.0.31" IncludeAssets="compile" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>Assembly\Assembly-CSharp.dll</HintPath>
