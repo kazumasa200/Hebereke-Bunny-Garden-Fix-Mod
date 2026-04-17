@@ -1,9 +1,9 @@
 # HeberekeBunnyGardenMod
-<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/b5b66725-53ff-4ab2-b495-c9d8f42ad3a3" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b5b66725-53ff-4ab2-b495-c9d8f42ad3a3" />
 
 [へべれけ ばにーがーでん](https://store.steampowered.com/app/3575730/_/)(海外名:Merry Bunny Garden)用の解像度修正やフレームレート上限変更などを行うBepInEx5用Modです。
 
-## 対応バージョン(v1.1.1現在)
+## 対応バージョン(v1.1.2現在)
 - ゲームバージョン1.0.1および1.0.2に対応  
 - Modバージョン1.0.6まではゲームバージョン 1.0.0のみ対応
 
