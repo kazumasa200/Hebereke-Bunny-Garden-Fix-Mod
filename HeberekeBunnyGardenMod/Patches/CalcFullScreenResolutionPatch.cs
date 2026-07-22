@@ -14,8 +14,8 @@ public class CalcFullScreenResolutionPatch
     private static bool Prefix(ref ValueTuple<int, int, bool> __result)
     {
         // コンフィグから値を取得
-        int num = Plugin.ConfigWidth.Value;
-        int num2 = Plugin.ConfigHeight.Value;
+        int num = Configs.Width.Value;
+        int num2 = Configs.Height.Value;
         bool flag = true;
         float num3 = (float)num / (float)num2;
         Resolution currentResolution = Screen.currentResolution;

@@ -18,7 +18,7 @@ public class RemoveCensorLightLoationPatch
         {
             try
             {
-                if (!Plugin.ConfigRemoveCensorLight.Value)
+                if (!Configs.RemoveCensorLight.Value)
                 {
                     return;
                 }
@@ -57,7 +57,7 @@ public class RemoveCensorLightLoationPatch
     {
         private static bool Prefix(LoationGame.Charas __instance)
         {
-            if (!Plugin.ConfigRemoveCensorLight.Value)
+            if (!Configs.RemoveCensorLight.Value)
             {
                 return true;
             }

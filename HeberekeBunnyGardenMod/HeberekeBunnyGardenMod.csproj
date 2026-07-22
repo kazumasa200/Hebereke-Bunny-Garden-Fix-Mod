@@ -39,6 +39,15 @@
     <None Remove="Assembly\Assembly-CSharp.dll" />
     <None Remove="Assembly\UniTask.dll" />
     <None Remove="Assembly\Unity.RenderPipelines.Universal.Runtime.dll" />
+    <None Remove="Assembly\Unity.RenderPipelines.Core.Runtime.dll" />
+    <None Remove="Assembly\Unity.TextMeshPro.dll" />
+    <None Remove="Assembly\UnityEngine.UI.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\settings.png" />
+    <EmbeddedResource Include="Resources\arrow-big-left.png" />
+    <EmbeddedResource Include="Resources\lang\en.json" />
   </ItemGroup>
 
   <!-- BepInEx 5 用パッケージ -->
@@ -80,5 +89,31 @@
     <Reference Include="Unity.InputSystem">
       <HintPath>Assembly\Unity.InputSystem.dll</HintPath>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.Core.Runtime">
+      <HintPath>Assembly\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>Assembly\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>Assembly\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
+
+  <!-- YAML 駆動 Config: Configs.yaml → Generated/Configs.g.cs + docs/configs.md を生成 -->
+  <ItemGroup>
+    <ConfigGenInputs Include="..\tools\ConfigGen\*.cs" />
+    <ConfigGenInputs Include="..\tools\ConfigGen\ConfigGen.csproj" />
+    <ConfigGenInputs Include="Configs.yaml" />
+  </ItemGroup>
+
+  <Target Name="GenerateConfigs" BeforeTargets="BeforeBuild;CoreCompile" Inputs="@(ConfigGenInputs)" Outputs="Generated\Configs.g.cs;..\docs\configs.md">
+    <Message Text="[GenerateConfigs] Running ConfigGen..." Importance="high" />
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\tools\ConfigGen\ConfigGen.csproj&quot; -- --yaml &quot;$(MSBuildProjectDirectory)\Configs.yaml&quot; --out &quot;$(MSBuildProjectDirectory)\Generated\Configs.g.cs&quot; --out-md &quot;$(MSBuildProjectDirectory)\..\docs\configs.md&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Error Condition="!Exists('Generated\Configs.g.cs')" Text="[GenerateConfigs] FAILED: Generated\Configs.g.cs was not produced. Check ConfigGen output above." />
+    <Error Condition="!Exists('..\docs\configs.md')" Text="[GenerateConfigs] FAILED: docs\configs.md was not produced. Check ConfigGen output above." />
+  </Target>
 </Project>

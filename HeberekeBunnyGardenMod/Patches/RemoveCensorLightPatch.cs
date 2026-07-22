@@ -14,7 +14,7 @@ public class RemoveCensorLightPatch
         // 元のコードを再現しつつ、CensorLightだけfalseに変更
         __instance.Topless.SetActive(true);
         __instance.Normal.SetActive(!v);
-        if (Plugin.ConfigRemoveCensorLight.Value == true)
+        if (Configs.RemoveCensorLight.Value == true)
         {
             __instance.CensorLight.SetActive(false);
         }
