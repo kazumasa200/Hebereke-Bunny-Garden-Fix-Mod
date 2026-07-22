@@ -74,6 +74,12 @@
 | `ToggleOverlayButton` | `Start` | オーバーレイ表示切替のボタン<br>フリーカメラの操作ガイド表示が対象です。<br>ControllerModifier と同時押しが必要です。 |
 | `CaptureScreenshotKey` | `P` | スクリーンショット保存のキーボードキー<br>ゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 出力します。 |
 | `CaptureScreenshotButton` | `A` | スクリーンショット保存のボタン<br>ゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 出力します。<br>ControllerModifier と同時押しが必要です。 |
+| `ToggleTimeStopKey` | `T` | 時間停止 ON/OFFのキーボードキー<br>ゲーム内の時間を停止／再開します（スロー中に押すと停止に切り替わります）。 |
+| `ToggleTimeStopButton` | `B` | 時間停止 ON/OFFのボタン<br>ゲーム内の時間を停止／再開します（スロー中に押すと停止に切り替わります）。<br>ControllerModifier と同時押しが必要です。 |
+| `ToggleSlowMotionKey` | `Y` | スロー再生 ON/OFFのキーボードキー<br>ゲーム内の時間を「スロー再生の速度」でゆっくり進めます（停止中に押すとスローに切り替わります）。 |
+| `ToggleSlowMotionButton` | `None` | スロー再生 ON/OFFのボタン<br>ゲーム内の時間を「スロー再生の速度」でゆっくり進めます（停止中に押すとスローに切り替わります）。<br>ControllerModifier と同時押しが必要です。 |
+| `FastForwardKey` | `G` | 早送り（押している間）のキーボードキー<br>押している間だけ「早送りの速度」でゲーム内時間を進めます。 |
+| `FastForwardButton` | `None` | 早送り（押している間）のボタン<br>押している間だけ「早送りの速度」でゲーム内時間を進めます。<br>ControllerModifier と同時押しが必要です。 |
 | `ControllerModifier` | `Select` | コントローラ修飾ボタン<br>ホットキーの同時押し用。ゲーム本来のコントローラー操作との競合回避に使用します。 |
 
 ## [General] 全般
@@ -81,6 +87,8 @@
 | キー | デフォルト | 説明 |
 |------|-----------|------|
 | `ScreenshotScale` | `1` | スクリーンショット解像度倍率<br>1 で通常解像度、2 で倍の解像度になります。 |
+| `SlowMotionScale` | `0.25` | スロー再生の速度<br>スロー再生 ON のときの時間の進む速さ（1.0 が通常速度）。小さいほどゆっくりになります。 |
+| `FastForwardSpeed` | `2.0` | 早送りの速度<br>早送り中の時間の進む速さ（1.0 が通常速度）。大きいほど速くなります。 |
 | `UIScale` | `1.5` | MOD UI スケール<br>Mod 提供の UI（設定パネル）の表示倍率。ゲーム本体 UI には影響しません。<br>変更はパネルを閉じて開き直すと反映されます。 |
 | `UpdateCheck` | `true` | 起動時にアップデートを確認<br>OFF にすると起動時の最新版チェックを行いません。 |
 

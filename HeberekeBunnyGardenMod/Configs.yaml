@@ -220,6 +220,39 @@
       ui:
         kind: keybinding
 
+    - name: TimeStopToggle
+      label: 時間停止 ON/OFF
+      key: ToggleTimeStop
+      type: hotkey
+      defaultKey: T
+      defaultButton: B
+      description: ゲーム内の時間を停止／再開します（スロー中に押すと停止に切り替わります）。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: SlowMotionToggle
+      label: スロー再生 ON/OFF
+      key: ToggleSlowMotion
+      type: hotkey
+      defaultKey: Y
+      defaultButton: None
+      description: ゲーム内の時間を「スロー再生の速度」でゆっくり進めます（停止中に押すとスローに切り替わります）。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: FastForward
+      label: 早送り（押している間）
+      key: FastForward
+      type: hotkey
+      defaultKey: G
+      defaultButton: None
+      description: 押している間だけ「早送りの速度」でゲーム内時間を進めます。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
     - name: ControllerModifier
       label: コントローラ修飾ボタン
       type: enum
@@ -241,6 +274,28 @@
         kind: slider
         step: 1
         format: '{0}x'
+
+    - name: SlowMotionScale
+      label: スロー再生の速度
+      type: float
+      default: 0.25
+      range: [0.05, 0.9]
+      description: スロー再生 ON のときの時間の進む速さ（1.0 が通常速度）。小さいほどゆっくりになります。
+      ui:
+        kind: slider
+        step: 0.05
+        format: '{0:F2}x'
+
+    - name: FastForwardSpeed
+      label: 早送りの速度
+      type: float
+      default: 2.0
+      range: [1.5, 10.0]
+      description: 早送り中の時間の進む速さ（1.0 が通常速度）。大きいほど速くなります。
+      ui:
+        kind: slider
+        step: 0.5
+        format: '{0:F1}x'
 
     - name: UIScale
       label: MOD UI スケール

@@ -49,10 +49,20 @@ public static class Configs
     public static global::HeberekeBunnyGardenMod.Utils.HotkeyConfig OverlayToggle;
     /// <summary>スクリーンショット保存</summary>
     public static global::HeberekeBunnyGardenMod.Utils.HotkeyConfig CaptureScreenshot;
+    /// <summary>時間停止 ON/OFF</summary>
+    public static global::HeberekeBunnyGardenMod.Utils.HotkeyConfig TimeStopToggle;
+    /// <summary>スロー再生 ON/OFF</summary>
+    public static global::HeberekeBunnyGardenMod.Utils.HotkeyConfig SlowMotionToggle;
+    /// <summary>早送り（押している間）</summary>
+    public static global::HeberekeBunnyGardenMod.Utils.HotkeyConfig FastForward;
     /// <summary>コントローラ修飾ボタン</summary>
     public static ConfigEntry<HeberekeBunnyGardenMod.Utils.ControllerButton> ControllerModifier;
     /// <summary>スクリーンショット解像度倍率</summary>
     public static ConfigEntry<int> ScreenshotScale;
+    /// <summary>スロー再生の速度</summary>
+    public static ConfigEntry<float> SlowMotionScale;
+    /// <summary>早送りの速度</summary>
+    public static ConfigEntry<float> FastForwardSpeed;
     /// <summary>MOD UI スケール</summary>
     public static ConfigEntry<float> UIScale;
     /// <summary>起動時にアップデートを確認</summary>
@@ -181,6 +191,30 @@ OFF にするとフリーカメラ中もゲーム UI を表示したままにし
             @"ゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 出力します。",
             @"ControllerModifier と同時押しが必要です。");
 
+        TimeStopToggle = new global::HeberekeBunnyGardenMod.Utils.HotkeyConfig(cfg,
+            "Hotkey", "ToggleTimeStop",
+            global::UnityEngine.InputSystem.Key.T,
+            global::HeberekeBunnyGardenMod.Utils.ControllerButton.B,
+            @"時間停止 ON/OFF",
+            @"ゲーム内の時間を停止／再開します（スロー中に押すと停止に切り替わります）。",
+            @"ControllerModifier と同時押しが必要です。");
+
+        SlowMotionToggle = new global::HeberekeBunnyGardenMod.Utils.HotkeyConfig(cfg,
+            "Hotkey", "ToggleSlowMotion",
+            global::UnityEngine.InputSystem.Key.Y,
+            global::HeberekeBunnyGardenMod.Utils.ControllerButton.None,
+            @"スロー再生 ON/OFF",
+            @"ゲーム内の時間を「スロー再生の速度」でゆっくり進めます（停止中に押すとスローに切り替わります）。",
+            @"ControllerModifier と同時押しが必要です。");
+
+        FastForward = new global::HeberekeBunnyGardenMod.Utils.HotkeyConfig(cfg,
+            "Hotkey", "FastForward",
+            global::UnityEngine.InputSystem.Key.G,
+            global::HeberekeBunnyGardenMod.Utils.ControllerButton.None,
+            @"早送り（押している間）",
+            @"押している間だけ「早送りの速度」でゲーム内時間を進めます。",
+            @"ControllerModifier と同時押しが必要です。");
+
         ControllerModifier = cfg.Bind("Hotkey", "ControllerModifier",
             HeberekeBunnyGardenMod.Utils.ControllerButton.Select,
             @"コントローラ修飾ボタン
@@ -192,6 +226,20 @@ OFF にするとフリーカメラ中もゲーム UI を表示したままにし
                 @"スクリーンショット解像度倍率
 1 で通常解像度、2 で倍の解像度になります。",
                 new AcceptableValueRange<int>(1, 8)));
+
+        SlowMotionScale = cfg.Bind("General", "SlowMotionScale",
+            0.25f,
+            new ConfigDescription(
+                @"スロー再生の速度
+スロー再生 ON のときの時間の進む速さ（1.0 が通常速度）。小さいほどゆっくりになります。",
+                new AcceptableValueRange<float>(0.05f, 0.9f)));
+
+        FastForwardSpeed = cfg.Bind("General", "FastForwardSpeed",
+            2.0f,
+            new ConfigDescription(
+                @"早送りの速度
+早送り中の時間の進む速さ（1.0 が通常速度）。大きいほど速くなります。",
+                new AcceptableValueRange<float>(1.5f, 10.0f)));
 
         UIScale = cfg.Bind("General", "UIScale",
             1.5f,
@@ -378,6 +426,33 @@ OFF にすると起動時の最新版チェックを行いません。");
         },
         new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
         {
+            Category = "Hotkey",
+            Label    = "時間停止 ON/OFF",
+            Desc     = "ゲーム内の時間を停止／再開します（スロー中に押すと停止に切り替わります）。",
+            Kind            = global::HeberekeBunnyGardenMod.Patches.Settings.UIKind.KeyBinding,
+            HotkeyProvider  = () => TimeStopToggle,
+            DropdownOptions = global::System.Enum.GetNames(typeof(global::HeberekeBunnyGardenMod.Utils.ControllerButton)),
+        },
+        new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
+        {
+            Category = "Hotkey",
+            Label    = "スロー再生 ON/OFF",
+            Desc     = "ゲーム内の時間を「スロー再生の速度」でゆっくり進めます（停止中に押すとスローに切り替わります）。",
+            Kind            = global::HeberekeBunnyGardenMod.Patches.Settings.UIKind.KeyBinding,
+            HotkeyProvider  = () => SlowMotionToggle,
+            DropdownOptions = global::System.Enum.GetNames(typeof(global::HeberekeBunnyGardenMod.Utils.ControllerButton)),
+        },
+        new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
+        {
+            Category = "Hotkey",
+            Label    = "早送り（押している間）",
+            Desc     = "押している間だけ「早送りの速度」でゲーム内時間を進めます。",
+            Kind            = global::HeberekeBunnyGardenMod.Patches.Settings.UIKind.KeyBinding,
+            HotkeyProvider  = () => FastForward,
+            DropdownOptions = global::System.Enum.GetNames(typeof(global::HeberekeBunnyGardenMod.Utils.ControllerButton)),
+        },
+        new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
+        {
             Category = "General",
             Label    = "スクリーンショット解像度倍率",
             Desc     = "1 で通常解像度、2 で倍の解像度になります。",
@@ -387,6 +462,30 @@ OFF にすると起動時の最新版チェックを行いません。");
             SliderStep = 1f,
             Format     = "{0}x",
             Accessor = new global::HeberekeBunnyGardenMod.Patches.Settings.IntAccessor(() => ScreenshotScale, 1f),
+        },
+        new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
+        {
+            Category = "General",
+            Label    = "スロー再生の速度",
+            Desc     = "スロー再生 ON のときの時間の進む速さ（1.0 が通常速度）。小さいほどゆっくりになります。",
+            Kind       = global::HeberekeBunnyGardenMod.Patches.Settings.UIKind.Slider,
+            SliderMin  = 0.05f,
+            SliderMax  = 0.9f,
+            SliderStep = 0.05f,
+            Format     = "{0:F2}x",
+            Accessor = new global::HeberekeBunnyGardenMod.Patches.Settings.FloatAccessor(() => SlowMotionScale, 0.05f),
+        },
+        new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
+        {
+            Category = "General",
+            Label    = "早送りの速度",
+            Desc     = "早送り中の時間の進む速さ（1.0 が通常速度）。大きいほど速くなります。",
+            Kind       = global::HeberekeBunnyGardenMod.Patches.Settings.UIKind.Slider,
+            SliderMin  = 1.5f,
+            SliderMax  = 10f,
+            SliderStep = 0.5f,
+            Format     = "{0:F1}x",
+            Accessor = new global::HeberekeBunnyGardenMod.Patches.Settings.FloatAccessor(() => FastForwardSpeed, 0.5f),
         },
         new global::HeberekeBunnyGardenMod.Patches.Settings.UIEntryMeta
         {
