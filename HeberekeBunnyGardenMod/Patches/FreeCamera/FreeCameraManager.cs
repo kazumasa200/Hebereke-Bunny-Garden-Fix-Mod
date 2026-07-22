@@ -1,15 +1,21 @@
-using System.Collections;
 using System.Collections.Generic;
 using GB;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Rendering.Universal;
 
 namespace HeberekeBunnyGardenMod.Patches.FreeCamera;
 
 /// <summary>
-/// フリーカメラ（コア仕様）。メインディスプレイ出力のみ。
-/// PiP / 別ディスプレイ出力は本 MOD では移植対象外。
+/// フリーカメラ（コア仕様・カメラ乗っ取り方式）。
+///
+/// <para>
+/// 新規カメラを複製すると、ゲーム側がアクティブカメラに対して行う描画変更
+/// （Cinemachine 制御・cullingMask 変更など。特にミニゲームやトルン演出）が
+/// 反映されず、キャラが映らなくなる。これを避けるため、ゲーム本編が使用中の
+/// カメラをそのまま乗っ取り（CinemachineBrain を一時無効化して transform を直接操作）、
+/// 解除時に元へ戻す。これによりゲーム本来の描画設定を完全に維持する。
+/// </para>
+/// PiP / 別ディスプレイ出力は本 MOD では対象外。
 /// </summary>
 public class FreeCameraManager : MonoBehaviour
 {
@@ -17,8 +23,10 @@ public class FreeCameraManager : MonoBehaviour
     public static bool IsFixed { get; private set; } = false;
 
     private Camera originalCam;
-    private GameObject freeCamObject;
     private FreeCameraController controller;
+    private Behaviour cinemachineBrain;      // 乗っ取り中は無効化する（解除時に復元）
+    private Vector3 savedPosition;
+    private Quaternion savedRotation;
     private readonly Dictionary<EventSystem, bool> eventSystemNavigationStates = [];
     private readonly Dictionary<Canvas, bool> canvasEnabledStates = [];
     private bool isGameUiSuppressed;
@@ -39,6 +47,10 @@ public class FreeCameraManager : MonoBehaviour
 
     private void Update()
     {
+        // 乗っ取り中にカメラがシーン遷移等で失われたら自動解除する。
+        if (IsActive && originalCam == null)
+            Deactivate();
+
         if (Configs.FreeCamToggle.IsTriggered())
             ToggleFreeCam();
 
@@ -74,51 +86,46 @@ public class FreeCameraManager : MonoBehaviour
             return;
         }
 
-        freeCamObject = new GameObject("HBGFreeCam");
-        var freeCam = freeCamObject.AddComponent<Camera>();
-        freeCam.CopyFrom(originalCam);
+        // 現在の位置・回転を保存（解除時に戻す）
+        savedPosition = originalCam.transform.position;
+        savedRotation = originalCam.transform.rotation;
 
-        freeCamObject.transform.SetPositionAndRotation(
-            originalCam.transform.position,
-            originalCam.transform.rotation);
+        // Cinemachine が毎フレーム transform を上書きするため、Brain を一時無効化する。
+        // Cinemachine アセンブリを参照せずに済むよう型名で取得する。
+        cinemachineBrain = originalCam.GetComponent("CinemachineBrain") as Behaviour;
+        if (cinemachineBrain != null)
+            cinemachineBrain.enabled = false;
 
-        // メインディスプレイにフリーカメラを出力し、元のカメラは停止する。
-        freeCam.targetDisplay = 0;
-        originalCam.enabled = false;
-        freeCamObject.AddComponent<AudioListener>();
-        if (originalCam.TryGetComponent<AudioListener>(out var listener))
-            listener.enabled = false;
-
-        CopyUrpCameraData(originalCam, freeCam);
-        controller = freeCamObject.AddComponent<FreeCameraController>();
+        // ゲーム本編のカメラ自身に操作コンポーネントを付けて transform を直接動かす。
+        controller = originalCam.gameObject.AddComponent<FreeCameraController>();
+        controller.enabled = !IsFixed;
 
         IsActive = true;
         IsFixed = false;
 
-        Plugin.Logger.LogInfo("フリーカメラを作成しました");
+        Plugin.Logger.LogInfo($"フリーカメラを有効化しました（乗っ取り: {originalCam.name}）");
         RefreshGameUiSuppression(force: true);
     }
 
     public void Deactivate()
     {
-        if (freeCamObject != null)
+        if (controller != null)
         {
-            var cam = freeCamObject.GetComponent<Camera>();
-            if (cam != null)
-                cam.targetTexture = null;
-            StartCoroutine(BlackoutAndDestroyRoutine(freeCamObject)); // ブラックアウトしてから破棄
-            freeCamObject = null;
+            Destroy(controller);
             controller = null;
         }
 
-        if (originalCam != null)
+        // Cinemachine Brain を復帰し、カメラを元の位置へ戻す。
+        if (cinemachineBrain != null)
         {
-            originalCam.enabled = true;
-            originalCam.targetDisplay = 0;
-
-            if (originalCam.TryGetComponent<AudioListener>(out var listener))
-                listener.enabled = true;
+            cinemachineBrain.enabled = true;
+            cinemachineBrain = null;
         }
+
+        if (originalCam != null)
+            originalCam.transform.SetPositionAndRotation(savedPosition, savedRotation);
+
+        originalCam = null;
 
         IsActive = false;
         IsFixed = false;
@@ -130,41 +137,8 @@ public class FreeCameraManager : MonoBehaviour
         Plugin.Logger.LogInfo("フリーカメラを解除しました");
     }
 
-    private IEnumerator BlackoutAndDestroyRoutine(GameObject targetCamObject)
-    {
-        // 破棄前の1フレーム、画面全体を黒で塗りつぶして残像を防ぐ。
-        var cam = targetCamObject.GetComponent<Camera>();
-        if (cam != null)
-        {
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = Color.black;
-            cam.cullingMask = 0;
-
-            yield return new WaitForEndOfFrame();
-        }
-        Destroy(targetCamObject);
-    }
-
-    private static void CopyUrpCameraData(Camera src, Camera dst)
-    {
-        var srcData = src.GetUniversalAdditionalCameraData();
-        var dstData = dst.GetUniversalAdditionalCameraData();
-        if (srcData == null || dstData == null)
-            return;
-
-        dstData.renderPostProcessing = srcData.renderPostProcessing;
-        dstData.antialiasing = srcData.antialiasing;
-        dstData.antialiasingQuality = srcData.antialiasingQuality;
-        dstData.stopNaN = srcData.stopNaN;
-        dstData.dithering = srcData.dithering;
-        dstData.renderShadows = srcData.renderShadows;
-        dstData.volumeLayerMask = srcData.volumeLayerMask;
-        dstData.volumeTrigger = srcData.volumeTrigger;
-    }
-
     public void RefreshGameUiSuppression(bool force = false)
     {
-        // メインディスプレイをフリーカメラが占有しているため、
         // フリーカメラ中・非固定・かつシステムUI非表示のときにゲームUI入力を抑止する。
         bool shouldSuppress = IsActive && !IsFixed && !ShouldExposeGameUiDuringFreeCam();
         if (!force && shouldSuppress == isGameUiSuppressed)
@@ -220,12 +194,9 @@ public class FreeCameraManager : MonoBehaviour
         }
     }
 
-    private bool ShouldHideCanvas(Canvas canvas)
+    private static bool ShouldHideCanvas(Canvas canvas)
     {
         if (canvas == null)
-            return false;
-
-        if (freeCamObject != null && canvas.transform.IsChildOf(freeCamObject.transform))
             return false;
 
         return canvas.renderMode != RenderMode.WorldSpace;
