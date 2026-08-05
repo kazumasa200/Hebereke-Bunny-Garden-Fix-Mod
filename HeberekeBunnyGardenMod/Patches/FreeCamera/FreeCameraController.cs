@@ -17,8 +17,15 @@ namespace HeberekeBunnyGardenMod.Patches.FreeCamera;
 /// </summary>
 public class FreeCameraController : MonoBehaviour
 {
-    /// <summary>右スティックの視点速度をマウス感度に合わせるための倍率。</summary>
-    private const float StickLookMultiplier = 18f;
+    /// <summary>
+    /// マウス視点の回転量（度/ピクセル、感度 1 あたり）。
+    /// マウスの delta は「前フレームからの移動量」という変位入力なので、
+    /// deltaTime を掛けてはいけない（掛けると FPS が高いほど感度が下がる）。
+    /// </summary>
+    private const float MouseLookScale = 0.05f;
+
+    /// <summary>右スティック最大倒し込み時の回転速度（度/秒、感度 1 あたり）。</summary>
+    private const float StickLookRate = 90f;
 
     /// <summary>スティックの遊びを無視するしきい値（ベクトルの長さ）。</summary>
     private const float StickDeadzone = 0.1f;
@@ -60,30 +67,28 @@ public class FreeCameraController : MonoBehaviour
 
     private void UpdateRotation(float dt)
     {
-        Vector2 look = ReadLookInput();
-        if (look != Vector2.zero)
+        float sensitivity = Configs.Sensitivity.Value;
+
+        // マウス: 変位入力。フレームごとの移動量をそのまま回転へ変換する（dt を掛けない）。
+        // これによりフレームレートに関係なく「同じ距離マウスを動かせば同じだけ回る」。
+        if (mouseLookEnabled && Mouse.current != null)
         {
-            yaw += look.x * dt;
-            pitch = Mathf.Clamp(pitch - look.y * dt, -PitchLimit, PitchLimit);
+            Vector2 mouse = Mouse.current.delta.ReadValue() * (sensitivity * MouseLookScale);
+            yaw += mouse.x;
+            pitch -= mouse.y;
         }
 
+        // スティック: 倒し込み量は「回転し続ける速さ」を表す速度入力なので dt を掛ける。
+        if (Configs.ControllerEnabled.Value)
+        {
+            Vector2 stick = ApplyDeadzone(GamepadHelper.ReadRightStick()) * (sensitivity * StickLookRate * dt);
+            yaw += stick.x;
+            pitch -= stick.y;
+        }
+
+        pitch = Mathf.Clamp(pitch, -PitchLimit, PitchLimit);
         transform.rotation = Quaternion.AngleAxis(yaw, Vector3.up)
                            * Quaternion.AngleAxis(pitch, Vector3.right);
-    }
-
-    /// <summary>マウスと右スティックの視点入力に感度を掛けて 1 つのベクトルへまとめる。</summary>
-    private Vector2 ReadLookInput()
-    {
-        float sensitivity = Configs.Sensitivity.Value;
-        Vector2 look = Vector2.zero;
-
-        if (mouseLookEnabled && Mouse.current != null)
-            look += Mouse.current.delta.ReadValue() * sensitivity;
-
-        if (Configs.ControllerEnabled.Value)
-            look += ApplyDeadzone(GamepadHelper.ReadRightStick()) * (sensitivity * StickLookMultiplier);
-
-        return look;
     }
 
     // ── 移動 ──────────────────────────────────────────────────────────
@@ -98,6 +103,7 @@ public class FreeCameraController : MonoBehaviour
         if (axes.sqrMagnitude > 1f)
             axes.Normalize();
 
+        // 「速度(単位/秒) × dt」の積分なので、移動はフレームレートに依存しない。
         transform.Translate(axes * (ResolveSpeed() * dt), Space.Self);
     }
 
