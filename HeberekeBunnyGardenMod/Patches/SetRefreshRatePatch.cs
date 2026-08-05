@@ -13,7 +13,7 @@ public class SetRefreshRatePatch
 {
     private static void Postfix()
     {
-        if (Plugin.ConfigFrameRate.Value < 0)
+        if (Configs.FrameRate.Value < 0)
         {
             // -1なら上限撤廃
             Application.targetFrameRate = -1;
@@ -21,7 +21,7 @@ public class SetRefreshRatePatch
             return;
         }
         // 指定したフレームレートに設定
-        Application.targetFrameRate = Plugin.ConfigFrameRate.Value;
-        PatchLogger.LogInfo($"フレームレートを {Plugin.ConfigFrameRate.Value} FPS に設定しました");
+        Application.targetFrameRate = Configs.FrameRate.Value;
+        PatchLogger.LogInfo($"フレームレートを {Configs.FrameRate.Value} FPS に設定しました");
     }
 }

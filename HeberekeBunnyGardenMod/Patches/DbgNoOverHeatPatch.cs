@@ -7,7 +7,7 @@ public class DbgNoOverHeatPatch
 {
     private static void Postfix(ref bool __result)
     {
-        if (Plugin.ConfigNoFallDown.Value == true)
+        if (Configs.NoFallDown.Value == true)
         {
             __result = true;
         }

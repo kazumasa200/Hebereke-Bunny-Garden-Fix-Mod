@@ -1,0 +1,319 @@
+# へべれけバニーガーデン FixMod の全 BepInEx Config 宣言。
+# source of truth — Generated/Configs.g.cs はこのファイルから tools/ConfigGen が生成する。
+# 既存 .cfg 互換のため section/key は現行構成（Resolution / AntiAliasing / Censor / Cheat / Camera）を踏襲する。
+# label は必須・name 直下。生成コードの XML doc と .cfg description の 1 行目に使われる。
+# type=hotkey は KB(Key) と Pad(ControllerButton) の 2 エントリを生成する。
+
+- section: Resolution
+  name: 解像度・フレームレート
+  configs:
+    - name: Width
+      label: 解像度幅
+      type: int
+      default: 1920
+      description: 解像度の幅（横）を指定します。
+
+    - name: Height
+      label: 解像度高さ
+      type: int
+      default: 1080
+      description: 解像度の高さ（縦）を指定します。
+
+    - name: FrameRate
+      label: FPS 上限
+      type: int
+      default: 60
+      range: [-1, 1000]
+      description: -1 で上限を撤廃します。
+      ui:
+        kind: slider
+        step: 1
+        format: '{0} fps'
+
+- section: AntiAliasing
+  name: アンチエイリアシング
+  configs:
+    - name: AntiAliasing
+      key: AntiAliasingType
+      label: アンチエイリアシング
+      type: enum
+      enumType: HeberekeBunnyGardenMod.AntiAliasingType
+      default: MSAA8x
+      description: |
+        Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x。
+        右にいくほど画質が向上しますが動作が重くなります。
+      ui:
+        kind: dropdown
+
+- section: Censor
+  name: 検閲ライト
+  configs:
+    - name: RemoveCensorLight
+      label: 検閲ライトを除去
+      type: bool
+      default: false
+      description: |
+        ON にするとヨガとスキンケアの際に不自然な光が差し込まなくなります。センシティブモードも貫通します。
+        くれぐれも配信しないように。OFF で従来動作。
+      ui:
+        kind: toggle
+
+- section: Cheat
+  name: チート
+  configs:
+    - name: NoDamage
+      label: ダメージ無効
+      type: bool
+      default: false
+      description: ON にするとダメージを受けなくなります。服も破けなくなります。でも橋から落ちるとアウト。OFF で従来動作。
+      ui:
+        kind: toggle
+
+    - name: Regeneration
+      label: HP0 にならない
+      type: bool
+      default: false
+      description: ON にするとダメージは受けますが HP が 0 にはなりません。服を破きたいときはこちら。OFF で従来動作。
+      ui:
+        kind: toggle
+
+    - name: NoFallDown
+      label: 転倒しない
+      type: bool
+      default: false
+      description: ON にするとヒートゲージ最大維持時に転倒しなくなります。OFF で従来動作。
+      ui:
+        kind: toggle
+
+- section: Camera
+  name: フリーカメラ
+  footer: |
+    フリーカメラは既定で **F5** キーで ON/OFF、**F6** キーで固定モードの切り替えができます。
+    コントローラーは既定で **Select + Y** で ON/OFF、**Select + X** で固定切り替えです。
+
+    #### フリーカメラ操作
+    | 入力 | 動作 |
+    |------|------|
+    | **WASD / 矢印キー** | 前後左右に移動 |
+    | **Q / E** | 上下に移動 |
+    | **Shift / Ctrl** | 高速移動 / 低速移動 |
+    | **マウス** | 視点移動 |
+    | **左スティック** | 前後左右に移動 |
+    | **右スティック** | 視点移動 |
+    | **ZL / ZR** | 下 / 上に移動 |
+    | **L / R** | 低速移動 / 高速移動 |
+
+    > フリーカメラ中は誤操作防止のため既定でゲーム本体の UI を自動で隠します。ポーズ・確認ダイアログ表示時は自動的に UI が復帰します。固定モード中はゲーム操作が可能です。
+  configs:
+    - name: Sensitivity
+      label: マウス感度
+      type: float
+      default: 2
+      range: [0.05, 30.0]
+      description: フリーカメラの視点移動の感度。
+      ui:
+        kind: slider
+        step: 0.05
+        format: '{0:F2}'
+
+    - name: Speed
+      label: 移動速度
+      type: float
+      default: 10
+      range: [0.5, 60.0]
+      description: フリーカメラの通常移動速度。
+      ui:
+        kind: slider
+        step: 0.5
+        format: '{0:F1}'
+
+    - name: FastSpeed
+      label: 高速移動速度 (Shift / R)
+      type: float
+      default: 30
+      range: [2.0, 120.0]
+      description: Shift 押下中またはコントローラ R 押下中の移動速度。
+      ui:
+        kind: slider
+        step: 0.5
+        format: '{0:F1}'
+
+    - name: SlowSpeed
+      label: 低速移動速度 (Ctrl / L)
+      type: float
+      default: 2.5
+      range: [0.05, 10.0]
+      description: Ctrl 押下中またはコントローラ L 押下中の移動速度。
+      ui:
+        kind: slider
+        step: 0.05
+        format: '{0:F2}'
+
+    - name: ControllerEnabled
+      label: フリーカメラ操作にゲームパッドを使用
+      type: bool
+      default: true
+      ui:
+        kind: toggle
+
+    - name: ControllerTriggerDeadzone
+      label: コントローラ ZL/ZR デッドゾーン
+      type: float
+      default: 0.35
+      range: [0.05, 0.95]
+      description: ZL/ZR を押下扱いにするしきい値。トリガーの遊びやドリフトがある場合に上げてください。
+      ui:
+        kind: slider
+        step: 0.05
+        format: '{0:F2}'
+
+    - name: HideGameUiInFreeCam
+      label: フリーカメラ中にゲーム本体の UI を隠す
+      type: bool
+      default: true
+      description: OFF にするとフリーカメラ中もゲーム UI を表示したままにします。
+      ui:
+        kind: toggle
+
+- section: Hotkey
+  name: ホットキー
+  configs:
+    - name: FreeCamToggle
+      label: フリーカメラ ON/OFF
+      key: ToggleFreeCam
+      type: hotkey
+      defaultKey: F5
+      defaultButton: Y
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: FixedFreeCamToggle
+      label: 固定フリーカメラ ON/OFF
+      key: ToggleFixedFreeCam
+      type: hotkey
+      defaultKey: F6
+      defaultButton: X
+      description: フリーカメラ起動中にカメラ位置を固定します。フリーカメラ起動中のみ有効。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: OverlayToggle
+      label: オーバーレイ表示切替
+      key: ToggleOverlay
+      type: hotkey
+      defaultKey: F12
+      defaultButton: Start
+      description: フリーカメラの操作ガイド表示が対象です。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: CaptureScreenshot
+      label: スクリーンショット保存
+      type: hotkey
+      defaultKey: P
+      defaultButton: A
+      description: ゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 出力します。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: TimeStopToggle
+      label: 時間停止 ON/OFF
+      key: ToggleTimeStop
+      type: hotkey
+      defaultKey: T
+      defaultButton: B
+      description: ゲーム内の時間を停止／再開します（スロー中に押すと停止に切り替わります）。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: SlowMotionToggle
+      label: スロー再生 ON/OFF
+      key: ToggleSlowMotion
+      type: hotkey
+      defaultKey: Y
+      defaultButton: None
+      description: ゲーム内の時間を「スロー再生の速度」でゆっくり進めます（停止中に押すとスローに切り替わります）。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: FastForward
+      label: 早送り（押している間）
+      key: FastForward
+      type: hotkey
+      defaultKey: G
+      defaultButton: None
+      description: 押している間だけ「早送りの速度」でゲーム内時間を進めます。
+      controllerDescription: ControllerModifier と同時押しが必要です。
+      ui:
+        kind: keybinding
+
+    - name: ControllerModifier
+      label: コントローラ修飾ボタン
+      type: enum
+      enumType: HeberekeBunnyGardenMod.Utils.ControllerButton
+      default: Select
+      description: |
+        ホットキーの同時押し用。ゲーム本来のコントローラー操作との競合回避に使用します。
+
+- section: General
+  name: 全般
+  configs:
+    - name: ScreenshotScale
+      label: スクリーンショット解像度倍率
+      type: int
+      default: 1
+      range: [1, 8]
+      description: 1 で通常解像度、2 で倍の解像度になります。
+      ui:
+        kind: slider
+        step: 1
+        format: '{0}x'
+
+    - name: SlowMotionScale
+      label: スロー再生の速度
+      type: float
+      default: 0.25
+      range: [0.05, 0.9]
+      description: スロー再生 ON のときの時間の進む速さ（1.0 が通常速度）。小さいほどゆっくりになります。
+      ui:
+        kind: slider
+        step: 0.05
+        format: '{0:F2}x'
+
+    - name: FastForwardSpeed
+      label: 早送りの速度
+      type: float
+      default: 2.0
+      range: [1.5, 10.0]
+      description: 早送り中の時間の進む速さ（1.0 が通常速度）。大きいほど速くなります。
+      ui:
+        kind: slider
+        step: 0.5
+        format: '{0:F1}x'
+
+    - name: UIScale
+      label: MOD UI スケール
+      type: float
+      default: 1.5
+      range: [1.0, 2.0]
+      description: |
+        Mod 提供の UI（設定パネル）の表示倍率。ゲーム本体 UI には影響しません。
+        変更はパネルを閉じて開き直すと反映されます。
+      ui:
+        kind: slider
+        step: 0.1
+        format: '{0:F1}x'
+
+    - name: UpdateCheck
+      label: 起動時にアップデートを確認
+      type: bool
+      default: true
+      description: OFF にすると起動時の最新版チェックを行いません。
+      ui:
+        kind: toggle

@@ -7,7 +7,7 @@ namespace HeberekeBunnyGardenMod.Patches
     {
         private static void Postfix(ref bool __result)
         {
-            if (Plugin.ConfigRegeneration.Value == true)
+            if (Configs.Regeneration.Value == true)
             {
                 __result = true;
             }
