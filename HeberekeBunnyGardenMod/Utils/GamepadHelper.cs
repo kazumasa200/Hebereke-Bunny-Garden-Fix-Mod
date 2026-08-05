@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -23,6 +22,15 @@ public enum ControllerButton
     Select,
 }
 
+/// <summary>
+/// 接続中の全ゲームパッドを対象にしたボタン・スティック読み取りヘルパ。
+///
+/// <para>
+/// ホットキー判定やフリーカメラ操作から毎フレーム呼ばれるため、LINQ やクロージャを
+/// 使わず <see cref="Gamepad.all"/>（ReadOnlyArray）を添字ループで走査する。
+/// これにより定常時のヒープ確保をゼロにし、GC スパイクを避ける。
+/// </para>
+/// </summary>
 public static class GamepadHelper
 {
     internal static bool IsButtonHeld(ControllerButton button)
@@ -33,62 +41,72 @@ public static class GamepadHelper
         return IsHeld(button);
     }
 
+    /// <summary>接続中のパッドのうち、最初に入力のある左スティック値を返す。</summary>
     internal static Vector2 ReadLeftStick()
     {
-        return ReadRawStick(gamepad => gamepad.leftStick.ReadValue());
+        var pads = Gamepad.all;
+        for (int i = 0; i < pads.Count; i++)
+        {
+            Vector2 value = pads[i].leftStick.ReadValue();
+            if (value.sqrMagnitude > 0f)
+                return value;
+        }
+        return Vector2.zero;
     }
 
+    /// <summary>接続中のパッドのうち、最初に入力のある右スティック値を返す。</summary>
     internal static Vector2 ReadRightStick()
     {
-        return ReadRawStick(gamepad => gamepad.rightStick.ReadValue());
+        var pads = Gamepad.all;
+        for (int i = 0; i < pads.Count; i++)
+        {
+            Vector2 value = pads[i].rightStick.ReadValue();
+            if (value.sqrMagnitude > 0f)
+                return value;
+        }
+        return Vector2.zero;
     }
 
+    /// <summary>接続中のパッドのうち、最初に踏み込みのあるトリガー値 (0〜1) を返す。</summary>
     internal static float ReadTrigger(ControllerButton button)
     {
-        return ReadRawTrigger(button);
+        var pads = Gamepad.all;
+        for (int i = 0; i < pads.Count; i++)
+        {
+            float value = button switch
+            {
+                ControllerButton.ZL => pads[i].leftTrigger.ReadValue(),
+                ControllerButton.ZR => pads[i].rightTrigger.ReadValue(),
+                _ => 0f,
+            };
+            if (value > 0f)
+                return value;
+        }
+        return 0f;
     }
 
+    /// <summary>いずれかのパッドでこのフレームに押されたら true。</summary>
     internal static bool IsTriggered(ControllerButton button)
     {
-        return IsRawTriggered(button);
+        var pads = Gamepad.all;
+        for (int i = 0; i < pads.Count; i++)
+        {
+            if (GetRawGamepadButton(pads[i], button)?.wasPressedThisFrame == true)
+                return true;
+        }
+        return false;
     }
 
+    /// <summary>いずれかのパッドで押下中なら true。</summary>
     internal static bool IsHeld(ControllerButton button)
     {
-        return IsRawHeld(button);
-    }
-
-    private static Vector2 ReadRawStick(System.Func<Gamepad, Vector2> selector)
-    {
-        return Gamepad.all
-            .Select(selector)
-            .FirstOrDefault(value => value.sqrMagnitude > 0f);
-    }
-
-    private static float ReadRawTrigger(ControllerButton button)
-    {
-        return Gamepad.all
-            .Select(gamepad => button switch
-            {
-                ControllerButton.ZL => gamepad.leftTrigger.ReadValue(),
-                ControllerButton.ZR => gamepad.rightTrigger.ReadValue(),
-                _ => 0f,
-            })
-            .FirstOrDefault(value => value > 0f);
-    }
-
-    private static bool IsRawTriggered(ControllerButton button)
-    {
-        return Gamepad.all
-            .Select(gamepad => GetRawGamepadButton(gamepad, button))
-            .Any(control => control?.wasPressedThisFrame == true);
-    }
-
-    private static bool IsRawHeld(ControllerButton button)
-    {
-        return Gamepad.all
-            .Select(gamepad => GetRawGamepadButton(gamepad, button))
-            .Any(control => control?.isPressed == true);
+        var pads = Gamepad.all;
+        for (int i = 0; i < pads.Count; i++)
+        {
+            if (GetRawGamepadButton(pads[i], button)?.isPressed == true)
+                return true;
+        }
+        return false;
     }
 
     private static ButtonControl? GetRawGamepadButton(Gamepad? gamepad, ControllerButton button)
@@ -114,6 +132,7 @@ public static class GamepadHelper
 
     private static ButtonControl GetRawSelectButton(Gamepad gamepad)
     {
+        // DualShock はタッチパッド押下を Select 相当として扱う。
         if (gamepad is DualShockGamepad dualShockGamepad)
             return dualShockGamepad.touchpadButton;
 
