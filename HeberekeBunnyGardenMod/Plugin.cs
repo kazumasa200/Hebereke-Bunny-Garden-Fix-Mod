@@ -1,17 +1,17 @@
-﻿using BepInEx;
-using BepInEx.Configuration;
-using BepInEx.Logging;
-
 #if BIE6
 using BepInEx.Unity.Mono;
 #endif
 
+using System;
+using System.IO;
+using System.Linq;
+using BepInEx;
+using BepInEx.Logging;
 using GB;
 using HarmonyLib;
-using HeberekeBunnyGardenMod.Controllers;
 using HeberekeBunnyGardenMod.Utils;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
+using UnityEngine.InputSystem;
 
 namespace HeberekeBunnyGardenMod;
 
@@ -28,247 +28,310 @@ public enum AntiAliasingType
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : BaseUnityPlugin
 {
-    public static ConfigEntry<int> ConfigWidth;
-    public static ConfigEntry<int> ConfigHeight;
-    public static ConfigEntry<int> ConfigFrameRate;
-    public static ConfigEntry<AntiAliasingType> ConfigAntiAliasing;
-    public static ConfigEntry<bool> ConfigUnlimited;
-    public static ConfigEntry<bool> ConfigRemoveCensorLight;
-    public static ConfigEntry<bool> ConfigNoDamage;
-    public static ConfigEntry<bool> ConfigRegeneration;
-    public static ConfigEntry<bool> ConfigNoFallDown;
-    public static ConfigEntry<float> ConfigSensitivity;
-    public static ConfigEntry<float> ConfigSpeed;
-    public static ConfigEntry<float> ConfigFastSpeed;
-    public static ConfigEntry<float> ConfigSlowSpeed;
+    private static Plugin Instance;
 
-    private GameObject freeCamObject;
-    private Camera freeCam;
-    private Camera originalCam;
-    private GBInputFreeCameraController controller;
-    public static bool isFreeCamActive = false;
-    public static bool isFixedFreeCam = false;
+    internal static event Action GUICallback;
+
+    private Patches.FreeCamera.FreeCameraManager freeCamera;
+    private bool isOverlayVisible = true;
+    private bool isCapturingScreenshot;
+    private static float suppressGameInputUntilUnscaledTime = -1f;
+    private const float ControllerShortcutSuppressDuration = 0.18f;
+
+    private static readonly string ScreenshotDirectory = Path.Combine(Paths.BepInExRootPath, "screenshots",
+        MyPluginInfo.PLUGIN_GUID);
 
     internal new static ManualLogSource Logger;
 
     private void Awake()
     {
-        ConfigWidth = Config.Bind(
-            "Resolution",              // セクション名
-            "Width",                   // キー名
-            1920,                      // デフォルト値
-            "解像度の幅（横）を指定します"); // 説明
-
-        ConfigHeight = Config.Bind(
-            "Resolution",
-            "Height",
-            1080,
-            "解像度の高さ（縦）を指定します");
-
-        ConfigFrameRate = Config.Bind(
-            "Resolution",
-            "FrameRate",
-            60,
-            "フレームレート上限を指定します。-1にすると上限を撤廃します。");
-
-        ConfigAntiAliasing = Config.Bind(
-            "AntiAliasing",
-            "AntiAliasingType",
-            AntiAliasingType.MSAA8x,
-            "アンチエイリアシングの種類を指定します。Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x");
-
-        ConfigRemoveCensorLight = Config.Bind(
-            "Censor",
-            "RemoveCensorLight",
-            false,
-            "trueにするとヨガとスキンケアの際に不自然な光が差し込まなくなります。センシティブモードも貫通します。くれぐれも配信しないように。");
-
-        ConfigNoDamage = Config.Bind(
-            "Cheat",
-            "NoDamage",
-            false,
-            "trueにするとダメージを受けなくなります。服も破けなくなります。でも橋から落ちるとアウト。");
-
-        ConfigRegeneration = Config.Bind(
-            "Cheat",
-            "Regeneration",
-            false,
-            "trueにするとダメージは受けますがHPが0にはなりません。服を破きたいときはこっち。");
-
-        ConfigNoFallDown = Config.Bind(
-            "Cheat",
-            "NoFallDown",
-            false,
-            "trueにするとヒートゲージマックス維持時に転倒しなくなります。");
-
-        ConfigSensitivity = Config.Bind(
-            "Camera",
-            "Sensitivity",
-            2f,
-            "フリーカメラのマウス感度");
-        ConfigSpeed = Config.Bind("Camera",
-            "Speed",
-            10f,
-            "フリーカメラの移動速度");
-        ConfigFastSpeed = Config.Bind("Camera",
-            "FastSpeed",
-            30f,
-            "フリーカメラの高速移動速度（Shift）");
-        ConfigSlowSpeed = Config.Bind("Camera",
-            "SlowSpeed",
-            2.5f,
-            "フリーカメラの低速移動速度（Ctrl）");
-
-        // Plugin startup logic
+        Instance = this;
         Logger = base.Logger;
         PatchLogger.Initialize(Logger);
+        ConfigMigration.Migrate(Config);
+
+        // YAML 駆動 Config（source of truth: Configs.yaml → Generated/Configs.g.cs）。
+        // HotkeyConfig（KB+Pad 統合型）も BindAll 内で初期化される。
+        Configs.BindAll(Config);
+
+        // F9 パネルのグループ折りたたみ状態を .cfg から復元する（UI 非表示の内部状態）。
+        Patches.Settings.SettingsCollapseState.Init(Config);
+
+        if (Configs.UpdateCheck.Value)
+            StartCoroutine(UpdateChecker.Check());
+
         var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         harmony.PatchAll();
-        PatchLogger.LogInfo($"解像度パッチを適用しました: {Plugin.ConfigWidth.Value}x{Plugin.ConfigHeight.Value}");
-        PatchLogger.LogInfo($"アンチエイリアシング設定: {Plugin.ConfigAntiAliasing.Value}");
+
+        Patches.Settings.SettingsController.Initialize(gameObject);
+        freeCamera = Patches.FreeCamera.FreeCameraManager.Initialize(gameObject);
+        Patches.TimeController.Initialize(gameObject);
+
+        PatchLogger.LogInfo($"プラグイン起動: {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION}");
+        PatchLogger.LogInfo($"解像度パッチを適用しました: {Configs.Width.Value}x{Configs.Height.Value}");
+        PatchLogger.LogInfo($"アンチエイリアシング設定: {Configs.AntiAliasing.Value}");
+    }
+
+    private void OnDestroy()
+    {
+        if (ReferenceEquals(Instance, this))
+            Instance = null;
+    }
+
+    private void Update()
+    {
+        if (Keyboard.current?[Key.F4].wasPressedThisFrame == true)
+            Config.Reload();
+
+        if (Configs.OverlayToggle.IsTriggered())
+            ToggleOverlay();
+
+        if (Configs.CaptureScreenshot.IsTriggered())
+            CaptureScreenshot();
     }
 
     private void OnGUI()
     {
-        // F5キーでトグル
-        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.F5)
-        {
-            ToggleFreeCam();
-        }
-        // F6で固定モード切替
-        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.F6)
-        {
-            ToggleFixedFreeCam();
-        }
-
-        if (isFreeCamActive)
-        {
-            if (isFixedFreeCam)
-            {
-                GUI.color = Color.yellow;
-                GUI.Label(new Rect(10, 40, 500, 30), "Fixed Free Camera Mode: ON (F6=TOGGLE)");
-                GUI.color = Color.white;
-            }
-            GUI.color = Color.green;
-            GUI.Label(new Rect(10, 10, 500, 30), "Free Camera: ON (F5=OFF, Arrow/WASD=Move, E/Q=UpDown)");
-            GUI.color = Color.white;
-        }
-    }
-
-    private void ToggleFreeCam()
-    {
-        isFreeCamActive = !isFreeCamActive;
-
-        if (isFreeCamActive)
-        {
-            CreateFreeCam();
-        }
-        else
-        {
-            DestroyFreeCam();
-            isFixedFreeCam = false;
-        }
-
-        Logger.LogInfo($"フリーカメラ: {(isFreeCamActive ? "ON" : "OFF")}");
-    }
-
-    private void ToggleFixedFreeCam()
-    {
-        if (isFreeCamActive)
-        {
-            isFixedFreeCam = !isFixedFreeCam;
-            Logger.LogInfo($"フリーカメラ固定モード: {(isFixedFreeCam ? "ON" : "OFF")}");
-        }
-    }
-
-    private void CreateFreeCam()
-    {
-        // 元のカメラを取得
-        originalCam = Camera.main;
-        if (originalCam == null)
-        {
-            Logger.LogWarning("メインカメラが見つかりません");
-            return;
-        }
-
-        // フリーカメラオブジェクトを作成
-        freeCamObject = new GameObject("FreeCam");
-        freeCam = freeCamObject.AddComponent<Camera>();
-
-        // カメラ設定をコピー
-        freeCam.CopyFrom(originalCam);
-        CopyUrpCameraData(originalCam, freeCam);
-
-        // 元のカメラの位置から開始
-        freeCamObject.transform.position = originalCam.transform.position;
-        freeCamObject.transform.rotation = originalCam.transform.rotation;
-
-        // GBInput対応コントローラーを追加
-        controller = freeCamObject.AddComponent<GBInputFreeCameraController>();
-
-        // オーディオリスナーを追加
-        freeCamObject.AddComponent<AudioListener>();
-
-        // 元のカメラを無効化
-        originalCam.enabled = false;
-        var originalListener = originalCam.GetComponent<AudioListener>();
-        if (originalListener != null)
-        {
-            originalListener.enabled = false;
-        }
-
-        Logger.LogInfo("フリーカメラを作成しました");
-    }
-
-    private static void CopyUrpCameraData(Camera src, Camera dst)
-    {
-        var srcData = src.GetUniversalAdditionalCameraData();
-        var dstData = dst.GetUniversalAdditionalCameraData();
-        if (srcData == null || dstData == null)
+        if (!isOverlayVisible || isCapturingScreenshot)
             return;
 
-        dstData.renderPostProcessing  = srcData.renderPostProcessing;
-        dstData.antialiasing          = srcData.antialiasing;
-        dstData.antialiasingQuality   = srcData.antialiasingQuality;
-        dstData.stopNaN               = srcData.stopNaN;
-        dstData.dithering             = srcData.dithering;
-        dstData.renderShadows         = srcData.renderShadows;
-        dstData.volumeLayerMask       = srcData.volumeLayerMask;
-        dstData.volumeTrigger         = srcData.volumeTrigger;
+        GUILayout.BeginArea(new Rect(10, 10, Screen.width / 2, Screen.height - 10));
+        GUICallback?.Invoke();
+        GUILayout.EndArea();
     }
 
-    private void DestroyFreeCam()
+    internal static void DisableFreeCamForSystemUiIfNeeded(string reason)
     {
-        if (freeCamObject != null)
+        Instance?.freeCamera?.Deactivate();
+        PatchLogger.LogInfo($"フリーカメラを自動解除しました: {reason}");
+    }
+
+    /// <summary>
+    /// 一定時間 (0.18 秒) ゲーム本体側の入力およびホットキー判定を抑止する。
+    /// コントローラーショートカット発火後の連続発火防止と、KeyBinding キャプチャ確定後の
+    /// 同一キー再評価防止に使用。
+    /// </summary>
+    public static void SuppressGameInputTemporarily()
+    {
+        suppressGameInputUntilUnscaledTime = Time.unscaledTime + ControllerShortcutSuppressDuration;
+    }
+
+    /// <summary>SuppressGameInputTemporarily 期間中なら true。</summary>
+    internal static bool ShouldSuppressGameInput()
+    {
+        return Time.unscaledTime < suppressGameInputUntilUnscaledTime;
+    }
+
+    internal static Camera FindCurrentCamera()
+    {
+        var mainCam = Camera.main;
+        if (mainCam != null)
         {
-            Destroy(freeCamObject);
-            freeCamObject = null;
-            freeCam = null;
-            controller = null;
+            Logger.LogInfo($"Camera.main = {mainCam.name}");
+            return mainCam;
         }
 
-        // 元のカメラを再有効化
-        if (originalCam != null)
+        // tag に頼らず depth 最大の有効なカメラを代替として使用
+        var cam = Camera.allCameras.OrderByDescending(c => c.depth).FirstOrDefault();
+        if (cam == null)
         {
-            originalCam.enabled = true;
-            var originalListener = originalCam.GetComponent<AudioListener>();
-            if (originalListener != null)
-            {
-                originalListener.enabled = true;
-            }
+            Logger.LogError("有効なカメラが見つかりません。");
+            return null;
         }
+        Logger.LogInfo($"代替カメラを使用: {cam.name}");
+        return cam;
+    }
+
+    private void ToggleOverlay()
+    {
+        isOverlayVisible = !isOverlayVisible;
+        PatchLogger.LogInfo($"表示: {(isOverlayVisible ? "ON" : "OFF")}");
+    }
+
+    private void CaptureScreenshot()
+    {
+        StartCoroutine(CaptureScreenshotCoroutine());
+    }
+
+    private System.Collections.IEnumerator CaptureScreenshotCoroutine()
+    {
+        Camera captureCam = FindCurrentCamera();
+        if (captureCam == null)
+            yield break;
+
+        isCapturingScreenshot = true;
+
+        try
+        {
+            Directory.CreateDirectory(ScreenshotDirectory);
+            string path = Path.Combine(ScreenshotDirectory, $"hbg_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
+            ScreenCapture.CaptureScreenshot(path, Configs.ScreenshotScale.Value);
+            PatchLogger.LogInfo($"スクリーンショットを保存しました: {path}");
+        }
+        catch (Exception ex)
+        {
+            PatchLogger.LogError($"スクリーンショット保存失敗: {ex.Message}");
+        }
+
+        // スクリーンショットがキャプチャされる前にオーバーレイを再表示しないよう、1フレーム待機
+        yield return null;
+        isCapturingScreenshot = false;
     }
 }
 
+/// <summary>フリーカメラ中（非固定）はゲーム本体の入力を無効化する。</summary>
 [HarmonyPatch(typeof(GBSystem), "IsInputDisabled")]
-public class CanvasScalerReflectionYoga1Patch
+public class FreeCamInputDisablePatch
 {
     private static void Postfix(ref bool __result)
     {
-        // フリーカメラがONかつ、固定モードでない場合、入力無効化
-        if (Plugin.isFreeCamActive && !Plugin.isFixedFreeCam)
-        {
+        if (Patches.FreeCamera.FreeCameraManager.IsActive && !Patches.FreeCamera.FreeCameraManager.IsFixed)
             __result = true;
+    }
+}
+
+/// <summary>終了確認ダイアログ表示時にフリーカメラを自動解除してカーソルを戻す。</summary>
+[HarmonyPatch(typeof(GBSystem), "confirmQuit")]
+public class FreeCamDisableOnQuitConfirmPatch
+{
+    private static void Prefix()
+    {
+        Plugin.DisableFreeCamForSystemUiIfNeeded("終了確認ダイアログ");
+    }
+}
+
+/// <summary>
+/// フリーカメラのコントローラーショートカット発火直後、および F9 設定パネルの
+/// キーバインドキャプチャ中に、ゲーム本体側の入力を遮断する。
+/// </summary>
+[HarmonyPatch]
+public class FreeCamControllerShortcutInputSuppressionPatch
+{
+    [HarmonyPatch(typeof(GBInput), "isTriggered")]
+    [HarmonyPrefix]
+    private static bool SuppressTriggered(InputAction button, ref bool __result)
+        => TrySuppress(button, ref __result);
+
+    [HarmonyPatch(typeof(GBInput), "isPressing")]
+    [HarmonyPrefix]
+    private static bool SuppressPressing(InputAction button, ref bool __result)
+        => TrySuppress(button, ref __result);
+
+    [HarmonyPatch(typeof(GBInput), "isReleased")]
+    [HarmonyPrefix]
+    private static bool SuppressReleased(InputAction button, ref bool __result)
+        => TrySuppress(button, ref __result);
+
+    [HarmonyPatch(typeof(GBInput), "isTriggeredR")]
+    [HarmonyPrefix]
+    private static bool SuppressTriggeredRepeat(ref bool __result)
+    {
+        // キャプチャ中はゲーム側の全リピート入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            __result = false;
+            return false;
         }
+        if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
+            return true;
+
+        __result = false;
+        return false;
+    }
+
+    [HarmonyPatch(typeof(GBInput), "GetStickValue")]
+    [HarmonyPrefix]
+    private static bool SuppressStick(InputAction stick, ref Vector2 __result)
+    {
+        // キャプチャ中はゲーム側のスティック入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            __result = Vector2.zero;
+            return false;
+        }
+        if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
+            return true;
+
+        if (stick?.activeControl?.device is not Gamepad)
+            return true;
+
+        __result = Vector2.zero;
+        return false;
+    }
+
+    [HarmonyPatch(typeof(GBInput), "CameraControll")]
+    [HarmonyPrefix]
+    private static bool SuppressCameraControl(ref Vector2 __result)
+    {
+        // キャプチャ中はゲーム側のカメラ操作入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            __result = Vector2.zero;
+            return false;
+        }
+        if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
+            return true;
+
+        __result = Vector2.zero;
+        return false;
+    }
+
+    private static bool TrySuppress(InputAction button, ref bool result)
+    {
+        // キャプチャ中はゲーム側の全ボタン入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            result = false;
+            return false;
+        }
+        if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
+            return true;
+
+        if (button?.activeControl?.device is not Gamepad)
+            return true;
+
+        result = false;
+        return false;
+    }
+}
+
+/// <summary>
+/// F9 設定パネル上（ポインタがパネル矩形内）またはキーバインドキャプチャ中は、
+/// マウスクリックがゲーム側に貫通しないよう GBInput.isMouseTriggered を false に差し替える。
+/// </summary>
+[HarmonyPatch(typeof(GBInput), "isMouseTriggered")]
+public class SuppressClickOverPanelPatch
+{
+    private static bool Prefix(ref bool __result)
+    {
+        if (Patches.Settings.SettingsController.IsAnyCapturing ||
+            Patches.Settings.SettingsController.ShouldSuppressMouseInput())
+        {
+            __result = false;
+            return false;
+        }
+        return true;
+    }
+}
+
+/// <summary>
+/// F9 設定パネル上またはキャプチャ中は、マウスホイールがゲーム側操作に流れないよう
+/// GBInput.ScrollAxis を 0 に差し替える（UI Toolkit 内のスクロールは影響を受けない）。
+/// </summary>
+[HarmonyPatch]
+public class SuppressScrollOverPanelPatch
+{
+    private static System.Reflection.MethodBase TargetMethod()
+        => AccessTools.PropertyGetter(typeof(GBInput), nameof(GBInput.ScrollAxis));
+
+    private static bool Prefix(ref float __result)
+    {
+        if (Patches.Settings.SettingsController.IsAnyCapturing ||
+            Patches.Settings.SettingsController.ShouldSuppressMouseInput())
+        {
+            __result = 0f;
+            return false;
+        }
+        return true;
     }
 }

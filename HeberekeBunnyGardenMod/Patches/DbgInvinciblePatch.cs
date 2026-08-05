@@ -10,7 +10,7 @@ public class DbgInvinciblePatch
 {
     private static void Postfix(ref bool __result)
     {
-        if (Plugin.ConfigNoDamage.Value == true)
+        if (Configs.NoDamage.Value == true)
         {
             __result = true;
         }
