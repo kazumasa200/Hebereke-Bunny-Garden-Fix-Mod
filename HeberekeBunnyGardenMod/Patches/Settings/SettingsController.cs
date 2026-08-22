@@ -1,3 +1,4 @@
+using HeberekeBunnyGardenMod.Patches;
 using HeberekeBunnyGardenMod.Utils;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -63,7 +64,7 @@ public class SettingsController : MonoBehaviour
     /// <summary>キーバインドキャプチャ中、もしくは Plugin の Suppress 期間中。Mod / 本体の入力を遮断する判定として使用。</summary>
     public static bool ShouldSuppressHotkey()
     {
-        return IsAnyCapturing || Plugin.ShouldSuppressGameInput();
+        return InputGate.HotkeysLocked;
     }
 
     public static bool ShouldSuppressMouseInput()
@@ -122,7 +123,7 @@ public class SettingsController : MonoBehaviour
         }
 
         // 値代入の前に Suppress を呼ぶ（代入で SettingChanged 発火が即時 hotkey 評価につながる経路を塞ぐ）
-        Plugin.SuppressGameInputTemporarily();
+        InputGate.ArmPadGrace();
 
         var oldKey = hotkey.KeyConfig.Value;
         hotkey.KeyConfig.Value = newKey;
@@ -164,7 +165,7 @@ public class SettingsController : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (ReferenceEquals(Instance, this)) Instance = null;
+        if (Instance == this) Instance = null;
     }
 
     private void Update()
