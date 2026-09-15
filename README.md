@@ -12,7 +12,7 @@
 今までのBepInEx5版もひきつづき開発します！！  
 また、下で紹介している導入方法はBepInEx5のものになります！ご了承ください～  
 
-## 対応バージョン(v1.2.0現在)
+## 対応バージョン(v1.2.1現在)
 - ゲームバージョン1.0.1および1.0.2に対応  
 - Modバージョン1.0.6まではゲームバージョン 1.0.0のみ対応
 
@@ -67,7 +67,7 @@
 もちろん今までどおり```BepInEx/config/net.noeleve.HeberekeBunnyGardenMod.cfg```を直接編集してもOKです。設定項目の一覧は[docs/configs.md](docs/configs.md)にまとまっています。
 
 ## 導入方法(Steam Deck対応)
-1. [Releases](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/releases)から最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod_v1.2.0_BepInEx5.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>例<img width="1873" height="898" alt="image" src="https://github.com/user-attachments/assets/d22762a6-3666-4afc-b04d-08c0021018fe" /><br>画像はV1.0.4の例です。導入時の最新バージョンを入れてください。
+1. [Releases](https://github.com/kazumasa200/Hebereke-Bunny-Garden-Fix-Mod/releases)から最新のzipファイルをダウンロードする。(HeberekeBunnyGardenMod_v1.2.1_BepInEx5.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>例<img width="1873" height="898" alt="image" src="https://github.com/user-attachments/assets/d22762a6-3666-4afc-b04d-08c0021018fe" /><br>画像はV1.0.4の例です。導入時の最新バージョンを入れてください。
 1. [BepInEx5](https://github.com/bepinex/bepinex/releases)をダウンロードする。Windowsの場合もSteam Deckの場合も```BepInEx_win_x64_{バージョン名}.zip```をダウンロードする。
 1. ゲームのexeがあるディレクトリにBepInEx5の中身を展開。つまり、HEBEREKE BUNNY GARDEN.exeとBepInExフォルダやdoorstop_configとかが同じ階層にある状態が正しいということ。<br>例<img width="1338" height="390" alt="image" src="https://github.com/user-attachments/assets/c6f690ba-ab66-431c-988f-9f2f6bae5050" />
 1. (Steam Deckの場合のみ実行) Steamでへべれけばにーがーでん(Merry Bunny Garden) → 右クリック → 「プロパティ」→「一般」→「起動オプション」に```WINEDLLOVERRIDES="winhttp=n,b" %command%```を入力。
